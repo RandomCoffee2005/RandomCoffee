@@ -1,0 +1,21 @@
+[project]
+name = "randomcoffee"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Timur Usmanov",email = "t.usmanov@innopolis.university"},
+    {name = "Andrew Pavlov",email = "and.pavlov@innopolis.university"},
+    {name = "Ramil Aminov",email = "r.aminov@innopolis.university"},
+    {name = "Fanis Zinnurov",email = "f.zinnurov@innopolis.university"},
+    {name = "Darya Stepanova",email = "da.stepanova@innopolis.university"},
+]
+requires-python = ">=3.14"
+dependencies = [
+]
+
+[tool.poetry]
+packages = [{include = "randomcoffee", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
