@@ -1,0 +1,30 @@
+[project]
+name = "randomcoffee"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Andrew Pavlov",email = "and.pavlov@innopolis.university"},
+    {name = "Darya Stepanova",email = "da.stepanova@innopolis.university"},
+    {name = "Fanis Zinnurov",email = "f.zinnurov@innopolis.university"},
+    {name = "Ramil Aminov",email = "r.aminov@innopolis.university"},
+    {name = "Timur Usmanov",email = "t.usmanov@innopolis.university"}
+]
+requires-python = ">=3.14"
+dependencies = [
+]
+
+[tool.poetry]
+packages = [{include = "randomcoffee", from = "src"}, {include = "envconfig", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[pytest]
+python_files = ["tests/"]
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.2,<10.0.0)",
+    "pytest-mock (>=3.15.1,<4.0.0)"
+]
