@@ -3,11 +3,11 @@ name = "randomcoffee"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Timur Usmanov",email = "t.usmanov@innopolis.university"},
     {name = "Andrew Pavlov",email = "and.pavlov@innopolis.university"},
-    {name = "Ramil Aminov",email = "r.aminov@innopolis.university"},
-    {name = "Fanis Zinnurov",email = "f.zinnurov@innopolis.university"},
     {name = "Darya Stepanova",email = "da.stepanova@innopolis.university"},
+    {name = "Fanis Zinnurov",email = "f.zinnurov@innopolis.university"},
+    {name = "Ramil Aminov",email = "r.aminov@innopolis.university"},
+    {name = "Timur Usmanov",email = "t.usmanov@innopolis.university"}
 ]
 requires-python = ">=3.14"
 dependencies = [
