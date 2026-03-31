@@ -12,4 +12,4 @@ def initialize_if_not_exists():
         with open(os.path.join(os.path.dirname(__file__), "init.sql")) as script:
             cur = conn.executescript(script.read())
             cur.close()
-
+        conn.commit()
