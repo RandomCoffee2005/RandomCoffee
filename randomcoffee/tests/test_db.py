@@ -8,11 +8,11 @@ def test_newdb(mocker: MockerFixture):
     dbpath = "/tmp/db.bin"
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath);
+    _ = mocker.patch('envconfig.config.dbpath', dbpath)
     db.initialize_if_not_exists()
     assert os.path.exists(dbpath)
     with db.connect(readonly=True) as conn:
-        for table in 'users', 'user_interests', 'pairings':
+        for table in 'users', 'user_interests', 'pairings', 'otps':
             cur = conn.execute(f"select * from {table}")
             assert len(cur.fetchall()) == 0
             cur.close()
