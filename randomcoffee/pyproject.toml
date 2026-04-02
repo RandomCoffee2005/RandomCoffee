@@ -11,6 +11,10 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "email-validator (>=2.3.0,<3.0.0)",
+    "fastapi (>=0.116.0,<1.0.0)",
+    "python-jose (>=3.5.0,<4.0.0)",
+    "uvicorn (>=0.35.0,<1.0.0)",
 ]
 
 [tool.poetry]
@@ -25,6 +29,7 @@ python_files = ["tests/"]
 
 [dependency-groups]
 dev = [
+    "httpx (>=0.28.1,<0.29.0)",
     "pytest (>=9.0.2,<10.0.0)",
     "pytest-mock (>=3.15.1,<4.0.0)",
     "flake8 (>=7.3.0,<8.0.0)",
