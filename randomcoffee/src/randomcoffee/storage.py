@@ -1,38 +1,23 @@
 import datetime as dt
-import os
 import secrets
 import sqlite3
 import uuid
 from typing import Any
 
-from envconfig import config
-
+from db.sql import connect as db_connect
+from db.sql import initialize_if_not_exists
 
 def connect(dbpath: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(dbpath)
+    conn = db_connect(dbpath=dbpath)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
 def init_db(dbpath: str) -> None:
-    script_path = os.path.join(os.path.dirname(__file__), "..", "db", "init.sql")
-    with connect(dbpath) as conn:
-        with open(script_path, encoding="utf-8") as script:
-            conn.executescript(script.read())
-
-        existing = conn.execute("SELECT COUNT(1) AS cnt FROM users").fetchone()["cnt"]
-        if existing == 0:
-            conn.execute(
-                """
-                INSERT INTO users (id, email, name, contact_info, active)
-                VALUES (?, ?, ?, ?, 1)
-                """,
-                (str(uuid.uuid4()), "admin@example.com", "Admin", "@admin"),
-            )
+    initialize_if_not_exists(dbpath=dbpath)
 
 
-def create_user(dbpath: str, email: str, full_name: str, is_admin: bool = False) -> str:
+def create_user(dbpath: str, email: str, full_name: str) -> str:
     with connect(dbpath) as conn:
         user_id = str(uuid.uuid4())
         conn.execute(
@@ -93,7 +78,7 @@ def consume_otp_and_get_user(dbpath: str, email: str, code: str) -> dict[str, An
             return None
 
         conn.execute("DELETE FROM otps WHERE email = ?", (email,))
-        return _attach_admin_flag(user)
+        return dict(user)
 
 
 def fetch_user_by_id(dbpath: str, user_id: str) -> dict[str, Any] | None:
@@ -108,10 +93,10 @@ def fetch_user_by_id(dbpath: str, user_id: str) -> dict[str, Any] | None:
         ).fetchone()
     if row is None:
         return None
-    return _attach_admin_flag(row)
+    return dict(row)
 
 
-def list_pairings_for_user(dbpath: str, user_id: str, status_filter: str | None = None) -> list[sqlite3.Row]:
+def list_pairings_for_user(dbpath: str, user_id: str, met_filter: bool | None = None) -> list[sqlite3.Row]:
     with connect(dbpath) as conn:
         query = """
             SELECT p.pair_id,
@@ -125,9 +110,9 @@ def list_pairings_for_user(dbpath: str, user_id: str, status_filter: str | None 
             WHERE (p.id1 = ? OR p.id2 = ?)
         """
         params: list[object] = [user_id, user_id, user_id]
-        if status_filter == "MET":
+        if met_filter is True:
             query += " AND p.meeting_happened = 1"
-        elif status_filter == "UNMET":
+        elif met_filter is False:
             query += " AND p.meeting_happened = 0"
         query += " ORDER BY p.pair_id DESC"
         return conn.execute(query, params).fetchall()
@@ -179,9 +164,3 @@ def list_active_user_ids(dbpath: str) -> list[str]:
     with connect(dbpath) as conn:
         rows = conn.execute("SELECT id FROM users WHERE active = 1 ORDER BY id").fetchall()
     return [str(row["id"]) for row in rows]
-
-
-def _attach_admin_flag(row: sqlite3.Row) -> dict[str, Any]:
-    data = dict(row)
-    data["is_admin"] = int(config.is_admin(data["email"]) or data["email"] == "admin@example.com")
-    return data

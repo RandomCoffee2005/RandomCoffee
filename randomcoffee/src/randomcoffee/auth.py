@@ -3,7 +3,9 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .jwt_utils import decode_jwt, issue_jwt
+from envconfig import config
+
+from .jwt_utils import decode_jwt
 from .storage import fetch_user_by_id
 
 
@@ -17,7 +19,7 @@ def get_dbpath(request: Request) -> str:
 def get_current_user_context(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> tuple[dict[str, Any], str]:
+) -> dict[str, Any]:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
@@ -31,10 +33,10 @@ def get_current_user_context(
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-    renewed_jwt = issue_jwt(str(user["id"]), secret)
-    return user, renewed_jwt
-def require_admin(context: tuple[dict[str, Any], str] = Depends(get_current_user_context)) -> tuple[dict[str, Any], str]:
-    user, renewed_jwt = context
-    if not bool(user["is_admin"]):
+    return user
+
+
+def require_admin(user: dict[str, Any] = Depends(get_current_user_context)) -> dict[str, Any]:
+    if not config.is_admin(user["email"]):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    return user, renewed_jwt
+    return user

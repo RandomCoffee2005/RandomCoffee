@@ -1,5 +1,3 @@
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -11,7 +9,6 @@ class UserView(BaseModel):
     full_name: str
     contact_info: str
     is_active: bool
-    is_admin: bool
 
 
 class SignInRequest(BaseModel):
@@ -31,19 +28,20 @@ class SignInResponse(BaseModel):
     jwt: str
 
 
-class UserWithJwtResponse(BaseModel):
+class UserResponse(BaseModel):
     user: UserView
-    jwt: str
 
 
-class NotificationsWithJwtResponse(BaseModel):
+class NotificationsResponse(BaseModel):
     notifications: list["NotificationView"]
-    jwt: str
 
 
-class NotificationWithJwtResponse(BaseModel):
+class NotificationResponse(BaseModel):
     notification: "NotificationView"
-    jwt: str
+
+
+class EmptyResponse(BaseModel):
+    pass
 
 
 class UserUpdateRequest(BaseModel):
@@ -58,12 +56,10 @@ class NotificationView(BaseModel):
     partner_user_id: str
     partner_email: EmailStr
     partner_full_name: str
-    status: Literal["MET", "UNMET"]
+    met: bool
     week_key: str
     created_at: str
 
 
-class TriggerPairingResponse(BaseModel):
-    pairs_created: int
-    notifications_created: int
-    jwt: str
+class ConfirmRequest(BaseModel):
+    notification_id: str

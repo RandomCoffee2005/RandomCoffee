@@ -3,8 +3,9 @@ import sqlite3
 
 from fastapi.testclient import TestClient
 
+from envconfig import config
 from randomcoffee import create_app, create_user
-from randomcoffee.storage import connect
+from randomcoffee.storage import connect, create_pairing
 
 
 def _auth_headers(token: str) -> dict[str, str]:
@@ -64,7 +65,6 @@ def test_user_edit_and_deactivate(tmp_path: Path):
         )
         assert update_response.status_code == 200
         assert update_response.json()["user"]["full_name"] == "Updated User"
-        token = update_response.json()["jwt"]
 
         deactivation_response = client.patch(
             "/myprofile",
@@ -80,8 +80,11 @@ def test_user_edit_and_deactivate(tmp_path: Path):
 
 def test_notifications_flow(tmp_path: Path):
     dbpath = str(tmp_path / "test_notifications_flow.db")
+    old_admins = set(config._admins)
+    config._admins = {"admin@example.com"}
     app = create_app(dbpath)
     with TestClient(app) as client:
+        create_user(dbpath, "admin@example.com", "Admin")
         create_user(dbpath, "alice@example.com", "Alice")
         create_user(dbpath, "bob@example.com", "Bob")
         create_user(dbpath, "charlie@example.com", "Charlie")
@@ -91,35 +94,42 @@ def test_notifications_flow(tmp_path: Path):
 
         trigger = client.post("/admin/pairing", headers=_auth_headers(admin_token))
         assert trigger.status_code == 200
-        assert trigger.json()["notifications_created"] >= 2
-        admin_token = trigger.json()["jwt"]
+        assert trigger.json() == {}
+
+        # /admin/pairing schedules background matching; tests add a pairing directly.
+        with connect(dbpath) as conn:
+            alice_id = str(conn.execute("SELECT id FROM users WHERE email = ?", ("alice@example.com",)).fetchone()["id"])
+            bob_id = str(conn.execute("SELECT id FROM users WHERE email = ?", ("bob@example.com",)).fetchone()["id"])
+        create_pairing(dbpath, alice_id, bob_id, "2026-01-01T00:00:00+00:00|test")
 
         all_notifications = client.get("/notifications", headers=_auth_headers(alice_token))
         assert all_notifications.status_code == 200
         notifications = all_notifications.json()["notifications"]
-        alice_token = all_notifications.json()["jwt"]
         assert len(notifications) >= 1
 
-        last = client.get("/notifications/last", headers=_auth_headers(alice_token))
+        last = client.get("/notifications", headers=_auth_headers(alice_token), params={"n": 1})
         assert last.status_code == 200
-        notification_id = last.json()["notification"]["id"]
-        alice_token = last.json()["jwt"]
+        notification_id = last.json()["notifications"][0]["id"]
 
-        confirm = client.post(f"/notifications/{notification_id}/confirm", headers=_auth_headers(alice_token))
+        confirm = client.post("/confirm", headers=_auth_headers(alice_token), json={"notification_id": notification_id})
         assert confirm.status_code == 200
-        assert confirm.json()["notification"]["status"] == "MET"
-        alice_token = confirm.json()["jwt"]
+        assert confirm.json()["notification"]["met"] is True
 
         met = client.get("/notifications", headers=_auth_headers(alice_token), params={"status": "attended"})
         assert met.status_code == 200
-        assert all(item["status"] == "MET" for item in met.json()["notifications"])
+        assert all(item["met"] is True for item in met.json()["notifications"])
+
+    config._admins = old_admins
 
 
 def test_admin_trigger_forbidden_for_non_admin(tmp_path: Path):
     dbpath = str(tmp_path / "test_admin_trigger_forbidden_for_non_admin.db")
+    old_admins = set(config._admins)
+    config._admins = set()
     app = create_app(dbpath)
     with TestClient(app) as client:
         create_user(dbpath, "user3@example.com", "User Three")
         token = _sign_in(client, dbpath, "user3@example.com")
         response = client.post("/admin/pairing", headers=_auth_headers(token))
         assert response.status_code == 403
+    config._admins = old_admins
