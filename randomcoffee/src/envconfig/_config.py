@@ -1,19 +1,18 @@
-import os
+import os, re
 
 # ADD ENV VARIABLES HERE
 
 """
 variable        | env       | type     | default   | info
 ----------------------------------------------------------------------------------------------------------
-config.dbpath           | DB_PATH           | str      | "db.bin"  | path to the SQLite database
-config._admins          | ADMINS            | set[str] | {}        | LOWERCASE ';'-separated admin email list
-config.email            | EMAIL             | str      | None      | Email that will be used for mailing
-config.email_pwd        | EMAIL_PWD         | str      | None      | Email password form current EMAIL
-config.email_token      | EMAIL_TOKEN       | str      | None      | Token for EMAIL usage
-config.email_smtp_url   | EMAIL_SMTP_URL    | str      | None      | Use it if there is specific mail provider
-config.email_smtp_port  | EMAIL_SMTP_PORT   | str      | None      | Use it if there is specific mail provider
+self.dbpath           | DB_PATH           | str      | "db.bin"  | path to the SQLite database
+self._admins          | ADMINS            | set[str] | {}        | LOWERCASE ';'-separated admin email list
+self.email            | EMAIL             | str      | None      | Email that will be used for mailing
+self.email_pwd        | EMAIL_PWD         | str      | None      | Email password form current EMAIL
+self.email_token      | EMAIL_TOKEN       | str      | None      | Token for EMAIL usage
+self.email_smtp_url   | EMAIL_SMTP_URL    | str      | None      | Use it if there is specific mail provider
+self.email_smtp_port  | EMAIL_SMTP_PORT   | str      | None      | Use it if there is specific mail provider
 """
-
 
 class Config:
     dbpath: str
@@ -23,6 +22,42 @@ class Config:
     email_token: str
     email_smtp_url: str
     email_smtp_port: str
+    
+    EMAIL_PROVIDERS: dict[str, str] = {
+        "gmail.com": "smtp.gmail.com",
+        "yandex.ru": "smtp.yandex.ru",
+        "yandex.com": "smtp.yandex.com",
+        "mail.ru": "smtp.mail.ru",
+        "list.ru": "smtp.mail.ru",
+        "bk.ru": "smtp.mail.ru",
+        "inbox.ru": "smtp.mail.ru",
+        "rambler.ru": "smtp.rambler.ru",
+        "outlook.com": "smtp-mail.outlook.com",
+        "hotmail.com": "smtp-mail.outlook.com",
+        "live.com": "smtp-mail.outlook.com",
+        "yahoo.com": "smtp.mail.yahoo.com",
+        "yahoo.ru": "smtp.mail.yahoo.com",
+        "mailgun.org": "smtp.mailgun.org",
+        "sendgrid.net": "smtp.sendgrid.net",
+        "zoho.com": "smtp.zoho.com",
+        "zoho.eu": "smtp.zoho.eu",
+        "protonmail.com": "smtp.protonmail.com",
+        "protonmail.ch": "smtp.protonmail.ch",
+        "icloud.com": "smtp.mail.me.com",
+        "me.com": "smtp.mail.me.com",
+        "aol.com": "smtp.aol.com",
+        "gmx.com": "mail.gmx.com",
+        "gmx.net": "mail.gmx.net",
+        "163.com": "smtp.163.com",
+        "qq.com": "smtp.qq.com",
+        "foxmail.com": "smtp.qq.com",
+        "seznam.cz": "smtp.seznam.cz",
+        "email.cz": "smtp.email.cz",
+        "post.cz": "smtp.post.cz",
+        "o2.pl": "poczta.o2.pl",
+        "wp.pl": "smtp.wp.pl",
+        "interia.pl": "smtp.poczta.interia.pl"
+    }
 
     def __init__(self):
         self.dbpath = os.getenv("DB_PATH", "db.bin")
@@ -34,6 +69,33 @@ class Config:
         self.email_token = os.getenv("EMAIL_TOKEN", None)
         self.email_smtp_url = os.getenv("EMAIL_SMTP_URL", None)
         self.email_smtp_port = os.getenv("EMAIL_SMTP_PORT", None)
+        self._validate_email_data()
 
     def is_admin(self, email: str) -> Bool:
         return email.lower().strip() in self._admins
+    
+    def _validate_email_data(self):
+        if self.email is None:
+            raise ValueError(
+                "EMAIL is not set. Please configure EMAIL and either EMAIL_PWD or EMAIL_TOKEN"
+            )
+        
+        if not re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,7}", self.email):
+            raise ValueError(
+                "Invalid EMAIL. Please check the correctness."
+            )
+        
+        if self.email_pwd is None and self.email_token is None:
+            raise ValueError(
+                "Either EMAIL_PWD or EMAIL_TOKEN must be set for authentication"
+            )
+        
+        if self.email_smtp_url is None:
+            if self.email.split('@') in self.PROVIDERS.keys:
+                self.email_smtp_url = self.PROVIDERS[self.email.split('@')]
+                self.email_smtp_port = 465
+            else:
+                raise ValueError("EMAIL_SMTP_URL is not configured")
+        
+        if self.email_smtp_port is None:
+            raise ValueError("EMAIL_SMTP_PORT is not configured")
