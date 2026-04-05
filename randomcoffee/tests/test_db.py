@@ -8,7 +8,7 @@ def test_newdb(mocker: MockerFixture):
     dbpath = "/tmp/db.bin"
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath)
+    _ = mocker.patch('os.getenv', {'DB_PATH': dbpath}.get)
     db.initialize_if_not_exists()
     assert os.path.exists(dbpath)
     with db.connect(readonly=True) as conn:
