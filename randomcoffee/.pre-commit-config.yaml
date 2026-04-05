@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - name: flake8
+        id: flake8
+        entry: flake8
+        language: unsupported
+        types: [python]
