@@ -27,7 +27,8 @@ def get_distributed_users():
         else:
             distributed_users = set()
             for pair in pairs:
-                distributed_users.add(pair[0], pair[1])
+                distributed_users.add(pair[0])
+                distributed_users.add(pair[1])
 
             return distributed_users 
 
@@ -41,11 +42,10 @@ def make_pair(id1: str, id2: str):
         # Get next pair_id
         cur = conn.execute("SELECT MAX(CAST(pair_id AS INTEGER)) FROM pairings")
         max_id = cur.fetchone()[0]
-        cur.close()
         next_id = 1 if max_id is None else max_id + 1
 
         # Make a new pair
-        cur = conn.execute(f"""INSERT INTO pairings VALUES ({next_id}, {id1}, {id2}, '0')""")
+        cur = conn.execute(f"""INSERT INTO pairings VALUES ({str(next_id)}, {id1}, {id2}, 0)""")
         conn.commit()
         cur.close()
 
