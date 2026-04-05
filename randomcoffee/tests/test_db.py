@@ -19,7 +19,8 @@ def test_newdb(mocker: MockerFixture):
 
     with db.connect(readonly=True) as conn:
         with pytest.raises(Exception):
-            cur = conn.execute("""insert into users values ('alice@qweqksdm', 'alice', 'dksmclksdmclksdmcl')""")
+            cur = conn.execute("""insert into users values
+                               ('alice@qweqksdm', 'alice', 'dksmclksdmclksdmcl')""")
             cur.close()
 
     os.remove(dbpath)
