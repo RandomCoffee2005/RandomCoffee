@@ -49,6 +49,16 @@ def get_user_interests(user_id: str):
             return user_interests 
 
 
+def get_undistributed_users_interests():
+    undistributed_users = get_active_users() - get_distributed_users()
+    users_interests = dict()
+
+    for user in undistributed_users:
+        users_interests[user] = get_user_interests(user)
+
+    return users_interests
+
+
 def make_pair(id1: str, id2: str):
     with db.connect() as conn:
         # Check if users with id1 and id2 exist
