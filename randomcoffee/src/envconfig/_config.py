@@ -19,5 +19,5 @@ class Config:
         self._admins = {e for e in map(str.strip, os.getenv("ADMINS", "")
                                        .lower().split(';')) if e}
 
-    def is_admin(self, email: str) -> Bool:
+    def is_admin(self, email: str) -> bool:
         return email.lower().strip() in self._admins
