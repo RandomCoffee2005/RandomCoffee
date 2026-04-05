@@ -1,4 +1,4 @@
-from ._config import Config
+from ._config import Config, EmailConfig, DBConfig
 
 
-__all__ = ['Config']
+__all__ = ['Config', 'EmailConfig', 'DBConfig']
