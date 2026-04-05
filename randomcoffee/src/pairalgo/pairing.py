@@ -33,6 +33,22 @@ def get_distributed_users():
             return distributed_users 
 
 
+def get_user_interests(user_id: str):
+    with db.connect(readonly=True) as conn:
+        cur = conn.execute(f"SELECT interest_id FROM user_interests WHERE id = '{user_id}'")
+        interests = cur.fetchall()
+        cur.close()
+
+        if len(interests) == 0:
+            return set()
+        else:
+            user_interests = set()
+            for item in interests:
+                user_interests.add(item[0])
+
+            return user_interests 
+
+
 def make_pair(id1: str, id2: str):
     with db.connect() as conn:
         # Check if users with id1 and id2 exist
@@ -42,11 +58,11 @@ def make_pair(id1: str, id2: str):
         # Get next pair_id
         cur = conn.execute("SELECT MAX(CAST(pair_id AS INTEGER)) FROM pairings")
         max_id = cur.fetchone()[0]
+        cur.close()
         next_id = 1 if max_id is None else max_id + 1
 
         # Make a new pair
-        cur = conn.execute(f"""INSERT INTO pairings VALUES ({str(next_id)}, {id1}, {id2}, 0)""")
+        conn.execute(f"""INSERT INTO pairings VALUES ({str(next_id)}, {id1}, {id2}, 0)""")
         conn.commit()
-        cur.close()
-
+        
         return next_id
