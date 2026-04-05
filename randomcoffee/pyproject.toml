@@ -14,7 +14,11 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "randomcoffee", from = "src"}, {include = "envconfig", from = "src"}]
+packages = [
+    {include = "randomcoffee", from = "src"}, 
+    {include = "envconfig", from = "src"}, 
+    {include = "emailsender", from = "src"}
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
