@@ -3,7 +3,7 @@ repos:
     hooks:
       - name: flake8
         id: flake8
-        entry: flake8
+        entry: flake8 --config=randomcoffee/.flake8
         language: unsupported
         types: [python]
       - name: bandit
