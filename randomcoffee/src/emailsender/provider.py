@@ -3,9 +3,10 @@ import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
-from envconfig import config
+from envconfig import Config
 
 
+config = Config.instance()
 class EmailSender:
     """
     Asynchronous email sender with SMTP support.

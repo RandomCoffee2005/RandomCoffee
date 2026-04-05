@@ -3,7 +3,7 @@ import os, re
 # ADD ENV VARIABLES HERE
 
 """
-variable        | env       | type     | default   | info
+variable              | env               | type     | default   | info
 ----------------------------------------------------------------------------------------------------------
 self.dbpath           | DB_PATH           | str      | "db.bin"  | path to the SQLite database
 self._admins          | ADMINS            | set[str] | {}        | LOWERCASE ';'-separated admin email list
@@ -15,6 +15,11 @@ self.email_smtp_port  | EMAIL_SMTP_PORT   | str      | None      | Use it if the
 """
 
 class Config:
+    @classmethod
+    def instance(cls):
+        if not cls._instance:
+            cls._instance = Config()
+        return cls._instance
     dbpath: str
     _admins: set[str]
     email: str
@@ -63,15 +68,15 @@ class Config:
         self.dbpath = os.getenv("DB_PATH", "db.bin")
         self._admins = {e for e in map(str.strip, os.getenv("ADMINS", "")
                                        .lower().split(';')) if e}
-        
+
         self.email = os.getenv("EMAIL", None)
         self.email_pwd = os.getenv("EMAIL_PWD", None)
         self.email_token = os.getenv("EMAIL_TOKEN", None)
         self.email_smtp_url = os.getenv("EMAIL_SMTP_URL", None)
         self.email_smtp_port = os.getenv("EMAIL_SMTP_PORT", None)
-        self._validate_email_data()
+        # self._validate_email_data()
 
-    def is_admin(self, email: str) -> Bool:
+    def is_admin(self, email: str) -> bool:
         return email.lower().strip() in self._admins
     
     def _validate_email_data(self):
@@ -79,23 +84,23 @@ class Config:
             raise ValueError(
                 "EMAIL is not set. Please configure EMAIL and either EMAIL_PWD or EMAIL_TOKEN"
             )
-        
+
         if not re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,7}", self.email):
             raise ValueError(
                 "Invalid EMAIL. Please check the correctness."
             )
-        
+
         if self.email_pwd is None and self.email_token is None:
             raise ValueError(
                 "Either EMAIL_PWD or EMAIL_TOKEN must be set for authentication"
             )
-        
+
         if self.email_smtp_url is None:
-            if self.email.split('@') in self.PROVIDERS.keys:
-                self.email_smtp_url = self.PROVIDERS[self.email.split('@')]
+            if self.email.split('@')[0] in self.EMAIL_PROVIDERS:
+                self.email_smtp_url = self.EMAIL_PROVIDERS[self.email.split('@')]
                 self.email_smtp_port = 465
             else:
                 raise ValueError("EMAIL_SMTP_URL is not configured")
-        
+
         if self.email_smtp_port is None:
             raise ValueError("EMAIL_SMTP_PORT is not configured")
