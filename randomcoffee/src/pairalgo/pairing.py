@@ -18,7 +18,7 @@ def get_active_users():
 
 def get_distributed_users():
     with db.connect(readonly=True) as conn:
-        cur = conn.execute("SELECT id1, id2 FROM pairings")
+        cur = conn.execute("SELECT id1, id2 FROM pairings WHERE meeting_happened = 0")
         pairs = cur.fetchall()
         cur.close()
 
