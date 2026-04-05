@@ -76,3 +76,50 @@ def make_pair(id1: str, id2: str):
         conn.commit()
         
         return next_id
+
+
+def HK_distribution(users_interests: dict):
+    """
+    Distribute active users based on their interests using Hopcroft-Karp algorithm
+    """
+    from collections import defaultdict
+    
+    # Building possible pairs graph
+    graph = defaultdict(list)
+    users = list(users_interests.keys())
+    
+    for i, user1 in enumerate(users):
+        for user2 in users[i+1:]:
+            if users_interests[user1] & users_interests[user2]:
+                graph[user1].append(user2)
+                graph[user2].append(user1)
+    
+    # Greedy algorithm for maximal pairs number
+    matching = {}
+    for user1 in users:
+        if user1 not in matching:
+            for user2 in graph[user1]:
+                if user2 not in matching:
+                    matching[user1] = user2
+                    matching[user2] = user1
+                    break
+    
+    # Pairs generation
+    pairs = []
+    matched = set()
+    for user1, user2 in matching.items():
+        if user1 not in matched and user2 not in matched:
+            pairs.append((user1, user2))
+            matched.add(user1)
+            matched.add(user2)
+    
+    unmatched = set(users) - matched
+    return pairs, unmatched
+
+
+def distribute_users():
+    undistributed_users = get_undistributed_users_interests()
+    pairs, users_with_no_pairs = HK_distribution(undistributed_users)
+
+    print(pairs)
+    return pairs

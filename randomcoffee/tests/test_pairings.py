@@ -76,10 +76,12 @@ def test_get_user_interests(mocker: MockerFixture):
         
         conn.commit()
 
-        test_return_1 = algo.get_user_interests('1')
-        test_return_2 = algo.get_user_interests('2')
-        assert test_return_1 == {1, 2, 3}
-        assert test_return_2 == {2}
+    test_return_1 = algo.get_user_interests('1')
+    test_return_2 = algo.get_user_interests('2')
+    assert test_return_1 == {1, 2, 3}
+    assert test_return_2 == {2}
+    
+    os.remove(dbpath)
 
 
 def test_get_undistributed_users_interests(mocker: MockerFixture):
@@ -108,12 +110,44 @@ def test_get_undistributed_users_interests(mocker: MockerFixture):
         
         conn.commit()
 
-        test_return = algo.get_undistributed_users_interests()
-        test_expected_output = {
-            '1': {1, 2, 3},
-            '2': {2}
-        }
-        assert test_return == test_expected_output
+    test_return = algo.get_undistributed_users_interests()
+    test_expected_output = {
+        '1': {1, 2, 3},
+        '2': {2}
+    }
+    assert test_return == test_expected_output
+    
+    os.remove(dbpath)
+
+
+def test_distribute_users(mocker: MockerFixture):
+    if os.path.exists(dbpath):
+        os.remove(dbpath)
+    _ = mocker.patch('envconfig.config.dbpath', dbpath)
+    db.initialize_if_not_exists()
+    assert os.path.exists(dbpath)
+
+    with db.connect() as conn:
+        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina Test', '@sometg1', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton Test', '@sometg2', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew Test', '@sometg3', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya Test', '@sometg4', '1')""")
+
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 3)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('2', 2)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('3', 6)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('3', 7)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('4', 1)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('4', 2)""")
+        
+        conn.commit()
+    
+    test_return = algo.distribute_users()
+    assert test_return == [('1', '4')]
+
+    os.remove(dbpath)
 
 
 def test_make_pair(mocker: MockerFixture):
