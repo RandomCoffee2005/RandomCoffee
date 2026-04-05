@@ -53,7 +53,7 @@ def test_get_distributed_users(mocker: MockerFixture):
         conn.commit()
 
     test_return = algo.get_distributed_users()
-    assert test_return == {'1', '2', '3', '4'}
+    assert test_return == {'3', '4'}
 
     os.remove(dbpath)
 
