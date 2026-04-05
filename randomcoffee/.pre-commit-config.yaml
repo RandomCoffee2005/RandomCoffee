@@ -6,3 +6,9 @@ repos:
         entry: flake8
         language: unsupported
         types: [python]
+      - name: bandit
+        id: bandit
+        entry: bandit
+        language: unsupported
+        types: [python]
+        files: "^randomcoffee/src/"
