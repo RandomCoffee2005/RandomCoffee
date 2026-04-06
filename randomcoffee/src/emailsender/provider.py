@@ -6,7 +6,6 @@ from email.utils import formataddr
 from envconfig import EmailConfig
 
 
-config = EmailConfig.instance()
 class EmailSender:
     """
     Asynchronous email sender with SMTP support.
@@ -33,6 +32,7 @@ class EmailSender:
         Returns:
             True if success else False
         """
+        config = Config.instance()
         try:
             msg = MIMEMultipart()
             sender_name = "Random Coffee Service"
