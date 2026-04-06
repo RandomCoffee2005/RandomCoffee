@@ -116,36 +116,6 @@ def test_get_undistributed_users_interests(mocker: MockerFixture):
     os.remove(dbpath)
 
 
-def test_distribute_users(mocker: MockerFixture):
-    if os.path.exists(dbpath):
-        os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath)
-    db.initialize_if_not_exists()
-    assert os.path.exists(dbpath)
-
-    with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
-
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 3)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('2', 2)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('3', 6)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('3', 7)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('4', 1)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('4', 2)""")
-
-        conn.commit()
-
-    test_return = algo.distribute_users()
-    assert test_return == [('1', '4'), ('2', '3')] or test_return == [('1', '4'), ('3', '2')]
-
-    os.remove(dbpath)
-
-
 def test_have_they_met_before(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
@@ -200,5 +170,35 @@ def test_make_pair(mocker: MockerFixture):
         cur = conn.execute("SELECT * FROM pairings")
         assert len(cur.fetchall()) == 2
         cur.close()
+
+    os.remove(dbpath)
+
+
+def test_distribute_users(mocker: MockerFixture):
+    if os.path.exists(dbpath):
+        os.remove(dbpath)
+    _ = mocker.patch('envconfig.config.dbpath', dbpath)
+    db.initialize_if_not_exists()
+    assert os.path.exists(dbpath)
+
+    with db.connect() as conn:
+        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('1', 3)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('2', 2)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('3', 6)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('3', 7)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('4', 1)""")
+        conn.execute("""INSERT INTO user_interests VALUES ('4', 2)""")
+
+        conn.commit()
+
+    test_return = algo.distribute_users()
+    assert test_return == [('1', '4'), ('2', '3')] or test_return == [('1', '4'), ('3', '2')]
 
     os.remove(dbpath)

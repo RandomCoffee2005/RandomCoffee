@@ -1,11 +1,12 @@
 import db
 from collections import defaultdict
 import random
+import uuid
 
 
 def get_active_users():
     with db.connect(readonly=True) as conn:
-        cur = conn.execute("SELECT id, active FROM users")
+        cur = conn.execute("""SELECT id, active FROM users""")
         users = cur.fetchall()
         cur.close()
 
@@ -14,7 +15,7 @@ def get_active_users():
 
 def get_distributed_users():
     with db.connect(readonly=True) as conn:
-        cur = conn.execute("SELECT id1, id2 FROM pairings WHERE meeting_happened = 0")
+        cur = conn.execute("""SELECT id1, id2 FROM pairings WHERE meeting_happened = 0""")
         pairs = cur.fetchall()
         cur.close()
 
@@ -28,7 +29,10 @@ def get_distributed_users():
 
 def get_user_interests(user_id: str):
     with db.connect(readonly=True) as conn:
-        cur = conn.execute(f"SELECT interest_id FROM user_interests WHERE id = '{user_id}'")
+        cur = conn.execute(
+            """SELECT interest_id FROM user_interests WHERE id = ?""",
+            (user_id,)
+        )
         interests = cur.fetchall()
         cur.close()
 
@@ -50,30 +54,46 @@ def get_undistributed_users_interests():
 
 
 def make_pair(id1: str, id2: str):
+    # Check if user is pairing with themselves
+    assert id1 != id2
+
     with db.connect() as conn:
         # Check if users with id1 and id2 exist
-        cur = conn.execute(f"SELECT * FROM users WHERE id IN ({id1}, {id2})")
+        cur = conn.execute(
+            """SELECT * FROM users WHERE id IN (?, ?)""",
+            (id1, id2)
+        )
         assert len(cur.fetchall()) == 2
-
-        # Get next pair_id
-        cur = conn.execute("SELECT MAX(CAST(pair_id AS INTEGER)) FROM pairings")
-        max_id = cur.fetchone()[0]
         cur.close()
-        next_id = 1 if max_id is None else max_id + 1
+
+        # Check if pair already exists
+        cur = conn.execute(
+            """SELECT 1 FROM pairings WHERE (id1 = ? AND id2 = ?) OR (id1 = ? AND id2 = ?)""",
+            (id1, id2, id2, id1)
+        )
+        assert cur.fetchone() is None
+        cur.close()
 
         # Make a new pair
-        conn.execute(f"""INSERT INTO pairings VALUES ({str(next_id)}, {id1}, {id2}, 0)""")
+        pair_id = uuid.uuid4().hex
+        conn.execute(
+            """INSERT INTO pairings VALUES (?, ?, ?, ?)""",
+            (pair_id, id1, id2, 0)
+        )
         conn.commit()
 
-        return next_id
+        return pair_id
 
 
 def have_they_met_before(id1: str, id2: str):
+    """
+    Check if users have met before.
+    """
     with db.connect(readonly=True) as conn:
         cur = conn.execute(
-            "SELECT 1 FROM pairings WHERE "
-            f"((id1 = {id1} AND id2 = {id2}) OR (id1 = {id2} AND id2 = {id1})) "
-            "AND meeting_happened = 1"
+            """SELECT 1 FROM pairings WHERE """
+            """((id1 = ? AND id2 = ?) OR (id1 = ? AND id2 = ?)) AND meeting_happened = 1""",
+            (id1, id2, id2, id1)
         )
         result = cur.fetchone() is not None
         cur.close()
@@ -81,7 +101,7 @@ def have_they_met_before(id1: str, id2: str):
         return result
 
 
-def _load_meetings_for_users(users: list):
+def _load_meetings_for_users(users: list[str]):
     """
     Load all meeting history for given users with one database query.
     """
@@ -90,8 +110,10 @@ def _load_meetings_for_users(users: list):
 
     with db.connect(readonly=True) as conn:
         placeholders = ','.join(['?'] * len(users))
-        cur = conn.execute(f"""SELECT DISTINCT id1, id2 FROM pairings WHERE meeting_happened = 1
-                            AND (id1 IN ({placeholders}) OR id2 IN ({placeholders}))""")
+        cur = conn.execute(f"""
+            SELECT DISTINCT id1, id2 FROM pairings WHERE meeting_happened = 1
+            AND (id1 IN ({placeholders}) OR id2 IN ({placeholders}))
+        """, users + users)
 
         meetings = set()
         for id1, id2 in cur.fetchall():
@@ -102,7 +124,11 @@ def _load_meetings_for_users(users: list):
     return meetings
 
 
-def _build_interests_graph(users_interests: dict, users: list, meetings: set):
+def _build_interests_graph(
+        users_interests: dict[str, set[int]],
+        users: list[str],
+        meetings: set[tuple[str, str]]
+):
     """
     Build possible distributions graph excluding users who have already met.
     """
@@ -114,11 +140,16 @@ def _build_interests_graph(users_interests: dict, users: list, meetings: set):
                 graph[u1].append(u2)
                 graph[u2].append(u1)
 
-    return graph
+    return dict(graph)
 
 
-def _find_greedy_matching(graph: dict, users: list):
-    """Find greedy matching for maximum pairs."""
+def _find_greedy_matching(
+        graph: dict[str, list[str]],
+        users: list[str]
+):
+    """
+    Find greedy matching for maximum pairs.
+    """
     matching = {}
 
     for user1 in users:
@@ -132,8 +163,13 @@ def _find_greedy_matching(graph: dict, users: list):
     return matching
 
 
-def _extract_pairs_from_matching(matching: dict, users: list):
-    """Extract unique pairs from matching dictionary."""
+def _extract_pairs_from_matching(
+        matching: dict[str, str],
+        users: list[str]
+):
+    """
+    Extract unique pairs from matching dictionary.
+    """
     pairs = []
     matched = set()
 
@@ -147,7 +183,10 @@ def _extract_pairs_from_matching(matching: dict, users: list):
     return pairs, unmatched
 
 
-def HK_distribution(users_interests: dict, meetings: set):
+def distribute_by_interests(
+        users_interests: dict[str, set[int]],
+        meetings: set[tuple[str, str]]
+):
     """
     Distribute active users based on their interests.
     """
@@ -162,7 +201,10 @@ def HK_distribution(users_interests: dict, meetings: set):
     return pairs, unmatched
 
 
-def _distribute_remaining_randomly(unmatched_users: set, meetings: set):
+def _distribute_remaining_randomly(
+        unmatched_users: set[str],
+        meetings: set[tuple[str, str]]
+):
     """
     Distribute remaining users randomly, avoiding previous meetings when possible.
     """
@@ -223,7 +265,7 @@ def distribute_users():
     meetings = _load_meetings_for_users(all_users)
 
     # First pass: distribute based on interests
-    interest_pairs, remaining = HK_distribution(undistributed_users, meetings)
+    interest_pairs, remaining = distribute_by_interests(undistributed_users, meetings)
 
     # Second pass: randomly distribute remaining users
     random_pairs = _distribute_remaining_randomly(remaining, meetings)
