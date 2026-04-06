@@ -34,6 +34,11 @@ LOGIN_START_LIMIT = 5
 LOGIN_START_WINDOW = dt.timedelta(hours=1)
 
 
+def ensure_active_user(context: dict[str, Any]) -> None:
+    if not bool(context["is_active"]):
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
 def to_user_view(row: dict[str, Any]) -> UserView:
     return UserView(
         id=str(row["id"]),
@@ -142,6 +147,7 @@ def get_notifications(
     context: dict[str, Any] = Depends(get_current_user_context),
 ) -> NotificationsResponse:
     current_user = context
+    ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
     met_filter: bool | None = None
     if status == "attended":
@@ -168,6 +174,7 @@ def confirm_notification(
     context: dict[str, Any] = Depends(get_current_user_context),
 ) -> EmptyResponse:
     current_user = context
+    ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
     updated = mark_pairing_met(current_user_id, payload.notification_id)
     if not updated:
@@ -178,7 +185,8 @@ def confirm_notification(
 
 
 @router.post("/admin/pairing", response_model=EmptyResponse)
-def trigger_pairings(_: dict[str, Any] = Depends(require_admin)) -> EmptyResponse:
+def trigger_pairings(context: dict[str, Any] = Depends(require_admin)) -> EmptyResponse:
+    ensure_active_user(context)
     # TODO: запускать генерацию пар в фоне
     # TODO: после генерации отправлять уведомления пользователям
     return EmptyResponse()

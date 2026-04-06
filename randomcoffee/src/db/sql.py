@@ -23,7 +23,7 @@ def initialize_if_not_exists() -> None:
         conn.commit()
 
 
-def create_user(email: str, full_name: str) -> str:
+def create_user(email: str, name: str) -> str:
     with connect() as conn:
         user_id = str(uuid.uuid4())
         conn.execute(
@@ -31,7 +31,7 @@ def create_user(email: str, full_name: str) -> str:
             INSERT INTO users (id, email, name, contact_info, active)
             VALUES (?, ?, ?, ?, 1)
             """,
-            (user_id, email, full_name, ""),
+            (user_id, email, name, ""),
         )
         return user_id
 
@@ -41,13 +41,6 @@ def issue_otp(email: str, ttl_minutes: int = 10) -> tuple[str, str]:
     expires_at = (now + dt.timedelta(minutes=ttl_minutes)).isoformat()
     code = f"{secrets.randbelow(1_000_000):06d}"
     with connect() as conn:
-        row = conn.execute(
-            "SELECT active FROM users WHERE email = ?",
-            (email,),
-        ).fetchone()
-        if row is not None and not bool(row["active"]):
-            raise ValueError("User not found or inactive")
-
         conn.execute(
             """
             INSERT INTO otps (email, password, expires_at)
@@ -69,7 +62,6 @@ def consume_otp_and_get_user(email: str, code: str) -> dict[str, Any] | None:
             SELECT email
             FROM otps
             WHERE email = ? AND password = ? AND expires_at > ?
-            LIMIT 1
             """,
             (email, code, now),
         ).fetchone()
@@ -77,17 +69,35 @@ def consume_otp_and_get_user(email: str, code: str) -> dict[str, Any] | None:
             return None
 
         user = conn.execute(
-            "SELECT id, email, name AS full_name, contact_info, active AS is_active FROM users WHERE email = ?",
+            """
+            SELECT id, email, name AS full_name, contact_info, active AS is_active
+            FROM users WHERE email = ?
+            """,
             (email,),
         ).fetchone()
         if user is None:
-            create_user(email, email)
+            name = email.split("@")[0]
+            name = name.capitalize()
+            user_id = str(uuid.uuid4())
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO users (id, email, name, contact_info, active)
+                    VALUES (?, ?, ?, ?, 1)
+                    """,
+                    (user_id, email, name, ""),
+                )
+            except sqlite3.IntegrityError:
+                pass
             user = conn.execute(
-                "SELECT id, email, name AS full_name, contact_info, active AS is_active FROM users WHERE email = ?",
+                """
+                SELECT id, email, name AS full_name, contact_info, active AS is_active
+                FROM users WHERE email = ?
+                """,
                 (email,),
             ).fetchone()
 
-        if user is None or not bool(user["is_active"]):
+        if user is None:
             return None
 
         conn.execute("DELETE FROM otps WHERE email = ?", (email,))

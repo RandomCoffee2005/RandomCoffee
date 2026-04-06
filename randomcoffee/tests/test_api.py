@@ -103,7 +103,11 @@ def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
         assert deactivation_response.json() == {}
 
         otp_after_deactivate = client.post("/login_start", json={"email": "user2@example.com"})
-        assert otp_after_deactivate.status_code == 404
+        assert otp_after_deactivate.status_code == 200
+        assert otp_after_deactivate.json() == {}
+
+        notifications_after_deactivate = client.get("/notifications", headers=_auth_headers(token))
+        assert notifications_after_deactivate.status_code == 403
 
 
 def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):

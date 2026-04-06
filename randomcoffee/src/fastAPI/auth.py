@@ -25,7 +25,7 @@ def get_current_user_context(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     user = fetch_user_by_id(payload.user_id)
-    if user is None or not bool(user["is_active"]):
+    if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     return user
