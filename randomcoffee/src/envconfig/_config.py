@@ -15,11 +15,13 @@ self.email_smtp_port  | EMAIL_SMTP_PORT   | str      | None      | Use it if the
 """
 
 class Config:
+    _instance = None
     @classmethod
     def instance(cls):
         if not cls._instance:
             cls._instance = Config()
         return cls._instance
+    
     dbpath: str
     _admins: set[str]
     email: str
