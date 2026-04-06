@@ -3,7 +3,7 @@ import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
-from envconfig import Config
+from envconfig import EmailConfig
 
 
 class EmailSender:
@@ -43,7 +43,7 @@ class EmailSender:
             content_type = "html" if is_html else "plain"
             msg.attach(MIMEText(body, content_type, "utf-8"))
             
-            smtp_port = int(config.email_smtp_port)
+            smtp_port = config.email_smtp_port
             use_tls = smtp_port == 465
             smtp = aiosmtplib.SMTP(
                 hostname=config.email_smtp_url,

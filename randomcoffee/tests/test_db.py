@@ -4,11 +4,17 @@ from pytest_mock import MockerFixture
 import pytest
 
 
+class MockDBConfig:
+    dbpath: str
+
+    def __init__(self, dbpath: str):
+        self.dbpath = dbpath
+
 def test_newdb(mocker: MockerFixture):
     dbpath = "/tmp/db.bin"
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     db.initialize_if_not_exists()
     assert os.path.exists(dbpath)
     with db.connect(readonly=True) as conn:
