@@ -3,6 +3,13 @@ import hashlib
 from collections import OrderedDict
 
 from jose import JWTError, jwt
+from pydantic import BaseModel
+
+
+class JWTPayload(BaseModel):
+    user_id: str
+    expiration: int
+    claim_hash: str
 
 
 def issue_jwt(user_id: str, secret: str, ttl_minutes: int = 30) -> str:
@@ -18,21 +25,9 @@ def issue_jwt(user_id: str, secret: str, ttl_minutes: int = 30) -> str:
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
-def decode_jwt(token: str, secret: str) -> dict[str, str | int]:
+def decode_jwt(token: str, secret: str):
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        payload = JWTPayload(**jwt.decode(token, secret, algorithms=["HS256"]))
     except JWTError as exc:
         raise ValueError("Invalid token") from exc
-
-    user_id = payload.get("userID")
-    expiration = payload.get("exp")
-    claim_hash = payload.get("hash")
-
-    if not isinstance(user_id, str) or not isinstance(expiration, int) or not isinstance(claim_hash, str):
-        raise ValueError("Invalid token payload")
-
-    return {
-        "hash": claim_hash,
-        "userID": user_id,
-        "exp": expiration,
-    }
+    return payload

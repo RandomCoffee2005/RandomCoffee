@@ -67,7 +67,9 @@ def test_login_start_without_account(tmp_path: Path, mocker: MockerFixture):
         assert login_response.status_code == 200
         assert login_response.json()["jwt"]
 
-        profile_response = client.get("/myprofile", headers=_auth_headers(login_response.json()["jwt"]))
+        profile_response = client.get(
+            "/myprofile", headers=_auth_headers(login_response.json()["jwt"])
+        )
         assert profile_response.status_code == 200
         assert profile_response.json()["user"]["email"] == "new@example.com"
 
@@ -125,8 +127,16 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
 
         # /admin/pairing schedules background matching; tests add a pairing directly.
         with connect() as conn:
-            alice_id = str(conn.execute("SELECT id FROM users WHERE email = ?", ("alice@example.com",)).fetchone()["id"])
-            bob_id = str(conn.execute("SELECT id FROM users WHERE email = ?", ("bob@example.com",)).fetchone()["id"])
+            alice_id = str(
+                conn.execute(
+                    "SELECT id FROM users WHERE email = ?", ("alice@example.com",)
+                ).fetchone()["id"]
+            )
+            bob_id = str(
+                conn.execute(
+                    "SELECT id FROM users WHERE email = ?", ("bob@example.com",)
+                ).fetchone()["id"]
+            )
         create_pairing(alice_id, bob_id, "2026-01-01T00:00:00+00:00|test")
 
         all_notifications = client.get("/notifications", headers=_auth_headers(alice_token))
@@ -138,11 +148,17 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         assert last.status_code == 200
         notification_id = last.json()["notifications"][0]["id"]
 
-        confirm = client.post("/confirm", headers=_auth_headers(alice_token), json={"notification_id": notification_id})
+        confirm = client.post(
+            "/confirm",
+            headers=_auth_headers(alice_token),
+            json={"notification_id": notification_id},
+        )
         assert confirm.status_code == 200
         assert confirm.json() == {}
 
-        met = client.get("/notifications", headers=_auth_headers(alice_token), params={"status": "attended"})
+        met = client.get(
+            "/notifications", headers=_auth_headers(alice_token), params={"status": "attended"}
+        )
         assert met.status_code == 200
         assert all(item["met"] is True for item in met.json()["notifications"])
 

@@ -8,7 +8,6 @@ from envconfig import config
 from .jwt_utils import decode_jwt
 from db.sql import fetch_user_by_id
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -25,7 +24,7 @@ def get_current_user_context(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-    user = fetch_user_by_id(payload["userID"])
+    user = fetch_user_by_id(payload.user_id)
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 

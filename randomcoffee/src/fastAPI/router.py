@@ -29,7 +29,6 @@ from db.sql import (
     mark_pairing_met,
 )
 
-
 router = APIRouter()
 LOGIN_START_LIMIT = 5
 LOGIN_START_WINDOW = dt.timedelta(hours=1)
@@ -85,7 +84,9 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
 def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
     row = consume_otp_and_get_user(payload.email, payload.otp)
     if row is None:
-        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
     token = issue_jwt(str(row["id"]), request.app.state.jwt_secret)
     return SignInResponse(jwt=token)
 
@@ -150,7 +151,9 @@ def get_notifications(
     rows = list_pairings_for_user(current_user_id, met_filter)
     if n is not None:
         if n < 1:
-            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="n must be positive")
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST, detail="n must be positive"
+            )
         rows = rows[:n]
 
     return NotificationsResponse(
@@ -168,7 +171,9 @@ def confirm_notification(
     current_user_id = str(current_user["id"])
     updated = mark_pairing_met(current_user_id, payload.notification_id)
     if not updated:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found")
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found"
+        )
     return EmptyResponse()
 
 
