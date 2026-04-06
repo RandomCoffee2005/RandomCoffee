@@ -3,8 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from envconfig import config
-
 from db.sql import initialize_if_not_exists
 
 from fastAPI import router as api_router
