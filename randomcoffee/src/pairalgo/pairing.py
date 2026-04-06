@@ -1,6 +1,3 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import db
 
 
@@ -30,7 +27,7 @@ def get_distributed_users():
                 distributed_users.add(pair[0])
                 distributed_users.add(pair[1])
 
-            return distributed_users 
+            return distributed_users
 
 
 def get_user_interests(user_id: str):
@@ -46,7 +43,7 @@ def get_user_interests(user_id: str):
             for item in interests:
                 user_interests.add(item[0])
 
-            return user_interests 
+            return user_interests
 
 
 def get_undistributed_users_interests():
@@ -74,28 +71,30 @@ def make_pair(id1: str, id2: str):
         # Make a new pair
         conn.execute(f"""INSERT INTO pairings VALUES ({str(next_id)}, {id1}, {id2}, 0)""")
         conn.commit()
-        
+
         return next_id
 
 
-def HK_distribution(users_interests: dict):
-    """
-    Distribute active users based on their interests using Hopcroft-Karp algorithm
-    """
+def _build_interests_graph(users_interests: dict):
+    """Build graph of possible pairs based on common interests."""
     from collections import defaultdict
-    
-    # Building possible pairs graph
+
     graph = defaultdict(list)
     users = list(users_interests.keys())
-    
+
     for i, user1 in enumerate(users):
-        for user2 in users[i+1:]:
+        for user2 in users[i + 1:]:
             if users_interests[user1] & users_interests[user2]:
                 graph[user1].append(user2)
                 graph[user2].append(user1)
-    
-    # Greedy algorithm for maximal pairs number
+
+    return graph, users
+
+
+def _find_greedy_matching(graph: dict, users: list):
+    """Find greedy matching for maximum pairs."""
     matching = {}
+
     for user1 in users:
         if user1 not in matching:
             for user2 in graph[user1]:
@@ -103,17 +102,33 @@ def HK_distribution(users_interests: dict):
                     matching[user1] = user2
                     matching[user2] = user1
                     break
-    
-    # Pairs generation
+
+    return matching
+
+
+def _extract_pairs_from_matching(matching: dict, users: list):
+    """Extract unique pairs from matching dictionary."""
     pairs = []
     matched = set()
+
     for user1, user2 in matching.items():
         if user1 not in matched and user2 not in matched:
             pairs.append((user1, user2))
             matched.add(user1)
             matched.add(user2)
-    
+
     unmatched = set(users) - matched
+    return pairs, unmatched
+
+
+def HK_distribution(users_interests: dict):
+    """
+    Distribute active users based on their interests using Hopcroft-Karp algorithm.
+    """
+    graph, users = _build_interests_graph(users_interests)
+    matching = _find_greedy_matching(graph, users)
+    pairs, unmatched = _extract_pairs_from_matching(matching, users)
+
     return pairs, unmatched
 
 
