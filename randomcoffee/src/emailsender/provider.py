@@ -32,7 +32,7 @@ class EmailSender:
         Returns:
             True if success else False
         """
-        config = Config.instance()
+        config = EmailConfig.instance()
         try:
             msg = MIMEMultipart()
             sender_name = "Random Coffee Service"
