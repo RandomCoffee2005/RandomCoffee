@@ -124,10 +124,10 @@ def update_me(
     values.append(current_user["id"])
 
     with storage_connect() as conn:
-        cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
-
-    if cur.rowcount == 0:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
+        cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                detail="User not found")
     return EmptyResponse()
 
 
