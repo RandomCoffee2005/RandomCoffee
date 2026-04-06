@@ -6,14 +6,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from envconfig import config
 
 from .jwt_utils import decode_jwt
-from .storage import fetch_user_by_id
+from db.sql import fetch_user_by_id
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def get_dbpath(request: Request) -> str:
-    return request.app.state.dbpath
 
 
 def get_current_user_context(
@@ -29,7 +25,7 @@ def get_current_user_context(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-    user = fetch_user_by_id(get_dbpath(request), payload["userID"])
+    user = fetch_user_by_id(payload["userID"])
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 

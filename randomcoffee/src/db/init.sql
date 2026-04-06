@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS pairings (
     pair_id TEXT PRIMARY KEY,
     id1 TEXT REFERENCES users,
     id2 TEXT REFERENCES users,
+    created_at TEXT NOT NULL,
     meeting_happened INTEGER NOT NULL DEFAULT 0, -- bool
     CHECK (id1 != id2)
 );

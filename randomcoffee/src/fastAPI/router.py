@@ -5,14 +5,13 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, status as http_status
 from fastapi.responses import JSONResponse
 
-from randomcoffee.auth import get_current_user_context, get_dbpath, require_admin
-from randomcoffee.jwt_utils import issue_jwt
-from randomcoffee.schemas import (
+from fastAPI.auth import get_current_user_context, require_admin
+from fastAPI.jwt_utils import issue_jwt
+from fastAPI.schemas import (
     ConfirmRequest,
     EmptyResponse,
     LoginStartRequest,
     LoginStartResponse,
-    NotificationResponse,
     NotificationView,
     NotificationsResponse,
     SignInRequest,
@@ -21,10 +20,9 @@ from randomcoffee.schemas import (
     UserUpdateRequest,
     UserView,
 )
-from randomcoffee.storage import (
+from db.sql import (
     consume_otp_and_get_user,
     connect as storage_connect,
-    fetch_pairing_for_user,
     fetch_user_by_id,
     issue_otp,
     list_pairings_for_user,
@@ -49,8 +47,8 @@ def to_user_view(row: dict[str, Any]) -> UserView:
 
 def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
     pair_id = str(row["pair_id"])
-    created_at = pair_id.split("|", maxsplit=1)[0] if "|" in pair_id else pair_id
-    week_key = dt.datetime.fromisoformat(created_at).strftime("%G-W%V") if "|" in pair_id else ""
+    created_at = str(row["created_at"])
+    week_key = dt.datetime.fromisoformat(created_at).strftime("%G-W%V")
     partner_user_id = str(row["id2"] if str(row["id1"]) == current_user_id else row["id1"])
     return NotificationView(
         id=pair_id,
@@ -76,16 +74,16 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
     attempts_by_email[payload.email] = valid_attempts
 
     try:
-        code, expires_at = issue_otp(get_dbpath(request), payload.email)
-        # TODO: отправить OTP через email (payload.email, code, expires_at).
+        code, expires_at = issue_otp(payload.email)
     except ValueError:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
+    # TODO: отправить OTP через email (payload.email, code, expires_at).
     return LoginStartResponse()
 
 
 @router.post("/login", response_model=SignInResponse)
 def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
-    row = consume_otp_and_get_user(get_dbpath(request), payload.email, payload.otp)
+    row = consume_otp_and_get_user(payload.email, payload.otp)
     if row is None:
         raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = issue_jwt(str(row["id"]), request.app.state.jwt_secret)
@@ -97,12 +95,12 @@ def get_myprofile(context: dict[str, Any] = Depends(get_current_user_context)) -
     return UserResponse(user=to_user_view(context))
 
 
-@router.patch("/myprofile", response_model=UserResponse)
+@router.patch("/myprofile", response_model=EmptyResponse)
 def update_me(
     payload: UserUpdateRequest,
     request: Request,
     context: dict[str, Any] = Depends(get_current_user_context),
-) -> UserResponse:
+) -> EmptyResponse:
     current_user = context
     updates: dict[str, object] = {}
     if payload.full_name is not None:
@@ -113,31 +111,23 @@ def update_me(
         updates["active"] = int(payload.is_active)
 
     if not updates:
-        return UserResponse(user=to_user_view(current_user))
+        return EmptyResponse()
 
     set_clause = ", ".join(f"{field} = ?" for field in updates)
     values = list(updates.values())
     values.append(current_user["id"])
 
-    with storage_connect(get_dbpath(request)) as conn:
-        conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
-        updated = conn.execute(
-            """
-            SELECT id, email, name AS full_name, contact_info, active AS is_active
-            FROM users
-            WHERE id = ?
-            """,
-            (current_user["id"],),
-        ).fetchone()
+    with storage_connect() as conn:
+        cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
 
-    if updated is None:
+    if cur.rowcount == 0:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserResponse(user=to_user_view(dict(updated)))
+    return EmptyResponse()
 
 
 @router.get("/profile/{user_id}", response_model=UserResponse)
 def get_profile(user_id: str, request: Request) -> UserResponse:
-    user = fetch_user_by_id(get_dbpath(request), user_id)
+    user = fetch_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
     return UserResponse(user=to_user_view(user))
@@ -157,7 +147,7 @@ def get_notifications(
         met_filter = True
     elif status == "not-attended":
         met_filter = False
-    rows = list_pairings_for_user(get_dbpath(request), current_user_id, met_filter)
+    rows = list_pairings_for_user(current_user_id, met_filter)
     if n is not None:
         if n < 1:
             raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="n must be positive")
@@ -168,23 +158,18 @@ def get_notifications(
     )
 
 
-@router.post("/confirm", response_model=NotificationResponse)
+@router.post("/confirm", response_model=EmptyResponse)
 def confirm_notification(
     payload: ConfirmRequest,
     request: Request,
     context: dict[str, Any] = Depends(get_current_user_context),
-) -> NotificationResponse:
+) -> EmptyResponse:
     current_user = context
     current_user_id = str(current_user["id"])
-    updated = mark_pairing_met(get_dbpath(request), current_user_id, payload.notification_id)
+    updated = mark_pairing_met(current_user_id, payload.notification_id)
     if not updated:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found")
-
-    row = fetch_pairing_for_user(get_dbpath(request), current_user_id, payload.notification_id)
-
-    if row is None:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found")
-    return NotificationResponse(notification=pairing_to_notification(row, current_user_id))
+    return EmptyResponse()
 
 
 @router.post("/admin/pairing", response_model=EmptyResponse)
