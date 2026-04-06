@@ -141,7 +141,37 @@ def test_distribute_users(mocker: MockerFixture):
         conn.commit()
 
     test_return = algo.distribute_users()
-    assert test_return == [('1', '4')]
+    assert test_return == [('1', '4'), ('2', '3')] or test_return == [('1', '4'), ('3', '2')]
+
+    os.remove(dbpath)
+
+
+def test_have_they_met_before(mocker: MockerFixture):
+    if os.path.exists(dbpath):
+        os.remove(dbpath)
+    _ = mocker.patch('envconfig.config.dbpath', dbpath)
+    db.initialize_if_not_exists()
+    assert os.path.exists(dbpath)
+
+    with db.connect() as conn:
+        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+
+        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
+        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
+        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+
+        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', '1')""")
+        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', '0')""")
+
+        conn.commit()
+
+    test_return_1 = algo.have_they_met_before('1', '2')
+    test_return_2 = algo.have_they_met_before('3', '4')
+    assert test_return_1 and not test_return_2
 
     os.remove(dbpath)
 
