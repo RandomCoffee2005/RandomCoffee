@@ -1,15 +1,15 @@
 import datetime as dt
 import os
 import secrets
+from envconfig import DBConfig
 import sqlite3
 import uuid
 from typing import Any
 
-from envconfig import config
 
-
-def connect(readonly: bool = False) -> sqlite3.Connection:
-    conn = sqlite3.connect(f"file:{config.dbpath}?mode={"ro" if readonly else "rwc"}", uri=True)
+def connect(readonly: bool = False):
+    conn = sqlite3.connect(f"file:{DBConfig.instance().dbpath}?mode={"ro" if readonly else "rwc"}",
+                           uri=True)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
