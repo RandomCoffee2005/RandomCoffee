@@ -10,6 +10,7 @@ class MockDBConfig:
     def __init__(self, dbpath: str):
         self.dbpath = dbpath
 
+
 def test_newdb(mocker: MockerFixture):
     dbpath = "/tmp/db.bin"
     if os.path.exists(dbpath):
@@ -25,7 +26,8 @@ def test_newdb(mocker: MockerFixture):
 
     with db.connect(readonly=True) as conn:
         with pytest.raises(Exception):
-            cur = conn.execute("""insert into users values ('alice@qweqksdm', 'alice', 'dksmclksdmclksdmcl')""")
+            cur = conn.execute("""insert into users values
+                               ('alice@qweqksdm', 'alice', 'dksmclksdmclksdmcl')""")
             cur.close()
 
     os.remove(dbpath)
