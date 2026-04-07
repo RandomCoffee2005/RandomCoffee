@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import os, re
+import os
+import re
 import threading
 
 # ADD ENV VARIABLES HERE
@@ -21,6 +22,7 @@ self.email_token     | EMAIL_TOKEN     | str  | None    | Token for EMAIL usage
 self.email_smtp_url  | EMAIL_SMTP_URL  | str  | None    | Use it if there is specific mail provider
 self.email_smtp_port | EMAIL_SMTP_PORT | str  | None    | Use it if there is specific mail provider
 """
+
 
 class Config:
     _instance_lock: threading.Lock = threading.Lock()
@@ -62,7 +64,7 @@ class DBConfig:
 
     def is_admin(self, email: str) -> bool:
         return email.lower().strip() in self._admins
-    
+
 
 class EmailConfig:
     _instance_lock: threading.Lock = threading.Lock()

@@ -31,6 +31,7 @@ def test_admins_checking(mocker: MockerFixture):
     assert c.is_admin(' ALICE@a.b')
     assert c.is_admin('\tboB@EMAIL.iO\r\n')
 
+
 def test_email_cfg_with_pwd(mocker: MockerFixture):
     env_vars = {
         "EMAIL": "mail@example.com",

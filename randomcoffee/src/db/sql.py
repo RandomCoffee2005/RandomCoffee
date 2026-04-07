@@ -4,7 +4,8 @@ import sqlite3
 
 
 def connect(readonly: bool = False):
-    return sqlite3.connect(f"file:{DBConfig.instance().dbpath}?mode={"ro" if readonly else "rwc"}", uri=True)
+    return sqlite3.connect(f"file:{DBConfig.instance().dbpath}?mode={"ro" if readonly else "rwc"}",
+                           uri=True)
 
 
 def initialize_if_not_exists():

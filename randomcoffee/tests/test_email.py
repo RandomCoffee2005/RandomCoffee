@@ -1,17 +1,16 @@
 from emailsender import send_email, EmailSender
 from pytest_mock import MockerFixture
 from unittest.mock import AsyncMock
-import pytest 
+import pytest
 
 
 def patch(mocker: MockerFixture,
-        email: str = "test@example.com",
-        email_pwd: str | None = "example_pwd",
-        email_token: str | None = "example_token",
-        smtp_url: str | None = "smtp.example.com",
-        smtp_port: str | None = "465",
-        smtp_should_fail: bool = False
-    ):
+          email: str = "test@example.com",
+          email_pwd: str | None = "example_pwd",
+          email_token: str | None = "example_token",
+          smtp_url: str | None = "smtp.example.com",
+          smtp_port: str | None = "465",
+          smtp_should_fail: bool = False):
     env_vars = {
         "EMAIL": email,
         "EMAIL_PWD": email_pwd,
@@ -20,9 +19,9 @@ def patch(mocker: MockerFixture,
         "EMAIL_SMTP_PORT": smtp_port
     }
     mocker.patch("os.getenv", env_vars.get)
-    
+
     mock_smtp_instance = AsyncMock()
-    
+
     if smtp_should_fail:
         mock_smtp_instance.connect.side_effect = Exception("SMTP failed")
 
@@ -33,45 +32,46 @@ def patch(mocker: MockerFixture,
         'smtp_class': mock_smtp_class,
         'smtp_instance': mock_smtp_instance
     }
-    
+
+
 @pytest.mark.asyncio
 async def test_send_email_sends_successfully(mocker: MockerFixture):
     mocks = patch(mocker)
-    
+
     sender = EmailSender()
     result = await sender.send_email(
         to_emails=["user@example.com"],
         subject="Test",
         body="Hello"
     )
-    
+
     assert result is True
     mocks['smtp_instance'].send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_send_email_returns_false_on_error(mocker: MockerFixture):
-    mocks = patch(mocker, smtp_should_fail=True)
-    
+    _ = patch(mocker, smtp_should_fail=True)
+
     sender = EmailSender()
     result = await sender.send_email(
         to_emails=["user@example.com"],
         subject="Test",
         body="Hello"
     )
-    
+
     assert result is False
 
 
 @pytest.mark.asyncio
 async def test_send_email_function_wrapper(mocker: MockerFixture):
     mocks = patch(mocker)
-    
+
     result = await send_email(
         to_emails=["user@example.com"],
         subject="Test",
         body="Hello"
     )
-    
+
     assert result is True
     mocks['smtp_instance'].send_message.assert_called_once()
