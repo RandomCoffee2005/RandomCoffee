@@ -216,7 +216,6 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
             create_user(conn, "charlie@example.com", "Charlie")
             conn.commit()
 
-        admin_token = _sign_in(client, "admin@example.com")
         alice_token = _sign_in(client, "alice@example.com")
         bob_token = _sign_in(client, "bob@example.com")
 

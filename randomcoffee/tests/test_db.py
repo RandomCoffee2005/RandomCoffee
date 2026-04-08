@@ -11,7 +11,6 @@ from db.sql import (
     fetch_user_by_id,
     issue_otp,
     list_pairings_for_user,
-    mark_pairing_met,
 )
 
 
