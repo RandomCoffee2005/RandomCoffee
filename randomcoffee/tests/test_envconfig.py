@@ -27,6 +27,7 @@ def test_admins_set(mocker: MockerFixture):
 
 def test_admins_checking(mocker: MockerFixture):
     _ = mocker.patch("os.getenv", {"ADMINS": ";alice@a.b;;BOB@email.io"}.get)
+
     c = DBConfig()
     assert c.is_admin(' ALICE@a.b')
     assert c.is_admin('\tboB@EMAIL.iO\r\n')

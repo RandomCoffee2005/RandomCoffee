@@ -59,8 +59,7 @@ class DBConfig:
 
     def __init__(self):
         self.dbpath = os.getenv("DB_PATH", "db.bin")
-        self._admins = {e for e in map(str.strip, os.getenv("ADMINS", "")
-                                       .lower().split(';')) if e}
+        self._admins = {e for e in map(str.strip, os.getenv("ADMINS", "").lower().split(";")) if e}
 
     def is_admin(self, email: str) -> bool:
         return email.lower().strip() in self._admins
