@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from db.sql import initialize_if_not_exists
+from db.sql import connect, initialize_if_not_exists
 
 from fastAPI import router as api_router
 
@@ -13,7 +13,8 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.jwt_secret = secrets.token_urlsafe(48)
         app.state.login_start_attempts = {}
-        initialize_if_not_exists()
+        with connect() as conn:
+            initialize_if_not_exists(conn)
         yield
 
     app = FastAPI(title="RandomCoffee API", lifespan=lifespan)

@@ -4,9 +4,20 @@ import sqlite3
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from envconfig import config
 from db.sql import connect, create_pairing
 from randomcoffee import create_app, create_user
+
+
+class MockDBConfig:
+    dbpath: str
+    _admins: set[str]
+
+    def __init__(self, dbpath: str, admins: set[str] | None = None):
+        self.dbpath = dbpath
+        self._admins = admins or set()
+
+    def is_admin(self, email: str) -> bool:
+        return email.lower().strip() in self._admins
 
 
 def _auth_headers(token: str) -> dict[str, str]:
@@ -40,10 +51,11 @@ def _sign_in(client: TestClient, email: str) -> str:
 
 def test_sign_in_success(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_sign_in_success.db")
-    mocker.patch("envconfig.config.dbpath", dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     app = create_app()
     with TestClient(app) as client:
-        create_user("user1@example.com", "User One")
+        with connect() as conn:
+            create_user(conn, "user1@example.com", "User One")
         start_response = client.post("/login_start", json={"email": "user1@example.com"})
         assert start_response.status_code == 200
         otp = _latest_otp("user1@example.com")
@@ -55,7 +67,7 @@ def test_sign_in_success(tmp_path: Path, mocker: MockerFixture):
 
 def test_login_start_without_account(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_login_start_without_account.db")
-    mocker.patch("envconfig.config.dbpath", dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     app = create_app()
     with TestClient(app) as client:
         response = client.post("/login_start", json={"email": "new@example.com"})
@@ -71,28 +83,30 @@ def test_login_start_without_account(tmp_path: Path, mocker: MockerFixture):
             "/myprofile", headers=_auth_headers(login_response.json()["jwt"])
         )
         assert profile_response.status_code == 200
-        assert profile_response.json()["user"]["email"] == "new@example.com"
+        assert profile_response.json()["name"] == "New"
+        assert "email" not in profile_response.json()
 
 
 def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_user_edit_and_deactivate.db")
-    mocker.patch("envconfig.config.dbpath", dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     app = create_app()
     with TestClient(app) as client:
-        create_user("user2@example.com", "User Two")
+        with connect() as conn:
+            create_user(conn, "user2@example.com", "User Two")
         token = _sign_in(client, "user2@example.com")
 
         update_response = client.patch(
             "/myprofile",
             headers=_auth_headers(token),
-            json={"full_name": "Updated User"},
+            json={"name": "Updated User"},
         )
         assert update_response.status_code == 200
         assert update_response.json() == {}
 
         profile_after_update = client.get("/myprofile", headers=_auth_headers(token))
         assert profile_after_update.status_code == 200
-        assert profile_after_update.json()["user"]["full_name"] == "Updated User"
+        assert profile_after_update.json()["name"] == "Updated User"
 
         deactivation_response = client.patch(
             "/myprofile",
@@ -106,24 +120,28 @@ def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
         assert otp_after_deactivate.status_code == 200
         assert otp_after_deactivate.json() == {}
 
+        profile_after_deactivate = client.get("/myprofile", headers=_auth_headers(token))
+        assert profile_after_deactivate.status_code == 200
+
         notifications_after_deactivate = client.get("/notifications", headers=_auth_headers(token))
         assert notifications_after_deactivate.status_code == 403
 
 
 def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_notifications_flow.db")
-    old_admins = set(config._admins)
-    config._admins = {"admin@example.com"}
-    mocker.patch("envconfig.config.dbpath", dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance',
+                     lambda: MockDBConfig(dbpath, {"admin@example.com"}))
     app = create_app()
     with TestClient(app) as client:
-        create_user("admin@example.com", "Admin")
-        create_user("alice@example.com", "Alice")
-        create_user("bob@example.com", "Bob")
-        create_user("charlie@example.com", "Charlie")
+        with connect() as conn:
+            create_user(conn, "admin@example.com", "Admin")
+            create_user(conn, "alice@example.com", "Alice")
+            create_user(conn, "bob@example.com", "Bob")
+            create_user(conn, "charlie@example.com", "Charlie")
 
         admin_token = _sign_in(client, "admin@example.com")
         alice_token = _sign_in(client, "alice@example.com")
+        bob_token = _sign_in(client, "bob@example.com")
 
         trigger = client.post("/admin/pairing", headers=_auth_headers(admin_token))
         assert trigger.status_code == 200
@@ -141,16 +159,20 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
                     "SELECT id FROM users WHERE email = ?", ("bob@example.com",)
                 ).fetchone()["id"]
             )
-        create_pairing(alice_id, bob_id, "2026-01-01T00:00:00+00:00|test")
+        with connect() as conn:
+            create_pairing(conn, alice_id, bob_id)
 
         all_notifications = client.get("/notifications", headers=_auth_headers(alice_token))
         assert all_notifications.status_code == 200
-        notifications = all_notifications.json()["notifications"]
+        notifications = all_notifications.json()
         assert len(notifications) >= 1
 
         last = client.get("/notifications", headers=_auth_headers(alice_token), params={"n": 1})
         assert last.status_code == 200
-        notification_id = last.json()["notifications"][0]["id"]
+        notification = last.json()[0]
+        assert notification["first_confirmed"] is False
+        assert notification["second_confirmed"] is False
+        notification_id = notification["id"]
 
         confirm = client.post(
             "/confirm",
@@ -160,24 +182,88 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         assert confirm.status_code == 200
         assert confirm.json() == {}
 
+        after_first_confirm = client.get(
+            "/notifications", headers=_auth_headers(alice_token), params={"n": 1}
+        )
+        assert after_first_confirm.status_code == 200
+        first_confirm_notification = after_first_confirm.json()[0]
+        assert first_confirm_notification["first_confirmed"] is True
+        assert first_confirm_notification["second_confirmed"] is False
+
+        bob_last = client.get(
+            "/notifications", headers=_auth_headers(bob_token), params={"n": 1}
+        )
+        assert bob_last.status_code == 200
+        bob_notification_id = bob_last.json()[0]["id"]
+
+        bob_confirm = client.post(
+            "/confirm",
+            headers=_auth_headers(bob_token),
+            json={"notification_id": bob_notification_id},
+        )
+        assert bob_confirm.status_code == 200
+        assert bob_confirm.json() == {}
+
+        after_both_confirm = client.get(
+            "/notifications", headers=_auth_headers(alice_token), params={"n": 1}
+        )
+        assert after_both_confirm.status_code == 200
+        both_confirm_notification = after_both_confirm.json()[0]
+        assert both_confirm_notification["first_confirmed"] is True
+        assert both_confirm_notification["second_confirmed"] is True
+
+        with connect() as conn:
+            charlie_id = str(
+                conn.execute(
+                    "SELECT id FROM users WHERE email = ?", ("charlie@example.com",)
+                ).fetchone()["id"]
+            )
+            create_pairing(conn, charlie_id, bob_id)
+
+        bob_latest = client.get(
+            "/notifications", headers=_auth_headers(bob_token), params={"n": 1}
+        )
+        assert bob_latest.status_code == 200
+        bob_latest_notification = bob_latest.json()[0]
+        assert bob_latest_notification["first_confirmed"] is False
+        assert bob_latest_notification["second_confirmed"] is False
+
+        bob_latest_confirm = client.post(
+            "/confirm",
+            headers=_auth_headers(bob_token),
+            json={"notification_id": bob_latest_notification["id"]},
+        )
+        assert bob_latest_confirm.status_code == 200
+        assert bob_latest_confirm.json() == {}
+
+        bob_second_only = client.get(
+            "/notifications", headers=_auth_headers(bob_token), params={"n": 1}
+        )
+        assert bob_second_only.status_code == 200
+        bob_second_only_notification = bob_second_only.json()[0]
+        assert bob_second_only_notification["first_confirmed"] is False
+        assert bob_second_only_notification["second_confirmed"] is True
+
         met = client.get(
             "/notifications", headers=_auth_headers(alice_token), params={"status": "attended"}
         )
         assert met.status_code == 200
-        assert all(item["met"] is True for item in met.json()["notifications"])
+        assert all(item["met"] is True for item in met.json())
 
-    config._admins = old_admins
+        bob_met = client.get(
+            "/notifications", headers=_auth_headers(bob_token), params={"status": "attended"}
+        )
+        assert bob_met.status_code == 200
+        assert all(item["met"] is True for item in bob_met.json())
 
 
 def test_admin_trigger_forbidden_for_non_admin(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_admin_trigger_forbidden_for_non_admin.db")
-    old_admins = set(config._admins)
-    config._admins = set()
-    mocker.patch("envconfig.config.dbpath", dbpath)
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     app = create_app()
     with TestClient(app) as client:
-        create_user("user3@example.com", "User Three")
+        with connect() as conn:
+            create_user(conn, "user3@example.com", "User Three")
         token = _sign_in(client, "user3@example.com")
         response = client.post("/admin/pairing", headers=_auth_headers(token))
         assert response.status_code == 403
-    config._admins = old_admins

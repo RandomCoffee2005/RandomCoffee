@@ -17,7 +17,8 @@ def test_newdb(mocker: MockerFixture):
         os.remove(dbpath)
 
     _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
-    db.initialize_if_not_exists()
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
     with db.connect(readonly=True) as conn:
         for table in "users", "user_interests", "pairings", "otps":

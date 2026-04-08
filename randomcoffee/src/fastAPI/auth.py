@@ -3,10 +3,10 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from envconfig import config
+from envconfig import DBConfig
 
 from .jwt_utils import decode_jwt
-from db.sql import fetch_user_by_id
+from db.sql import connect, fetch_user_by_id
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -24,7 +24,8 @@ def get_current_user_context(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-    user = fetch_user_by_id(payload.user_id)
+    with connect() as conn:
+        user = fetch_user_by_id(conn, payload.user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
@@ -32,6 +33,6 @@ def get_current_user_context(
 
 
 def require_admin(user: dict[str, Any] = Depends(get_current_user_context)) -> dict[str, Any]:
-    if not config.is_admin(user["email"]):
+    if not DBConfig.instance().is_admin(user["email"]):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return user

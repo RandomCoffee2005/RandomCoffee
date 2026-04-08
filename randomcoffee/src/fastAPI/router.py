@@ -13,16 +13,14 @@ from fastAPI.schemas import (
     LoginStartRequest,
     LoginStartResponse,
     NotificationView,
-    NotificationsResponse,
+    ProfileView,
     SignInRequest,
     SignInResponse,
-    UserResponse,
     UserUpdateRequest,
-    UserView,
 )
 from db.sql import (
     consume_otp_and_get_user,
-    connect as storage_connect,
+    connect,
     fetch_user_by_id,
     issue_otp,
     list_pairings_for_user,
@@ -39,13 +37,11 @@ def ensure_active_user(context: dict[str, Any]) -> None:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
-def to_user_view(row: dict[str, Any]) -> UserView:
-    return UserView(
+def to_profile_view(row: dict[str, Any]) -> ProfileView:
+    return ProfileView(
         id=str(row["id"]),
-        email=row["email"],
-        full_name=row["full_name"],
+        name=row["name"],
         contact_info=row["contact_info"],
-        is_active=bool(row["is_active"]),
     )
 
 
@@ -59,8 +55,10 @@ def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
         user_id=current_user_id,
         partner_user_id=partner_user_id,
         partner_email=row["partner_email"],
-        partner_full_name=row["partner_name"],
+        partner_name=row["partner_name"],
         met=bool(row["meeting_happened"]),
+        first_confirmed=bool(row["user1_confirmed"]),
+        second_confirmed=bool(row["user2_confirmed"]),
         week_key=week_key,
         created_at=created_at,
     )
@@ -77,17 +75,16 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
     valid_attempts.append(now)
     attempts_by_email[payload.email] = valid_attempts
 
-    try:
-        code, expires_at = issue_otp(payload.email)
-    except ValueError:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
+    with connect() as conn:
+        code, expires_at = issue_otp(conn, payload.email)
     # TODO: отправить OTP через email (payload.email, code, expires_at).
     return LoginStartResponse()
 
 
 @router.post("/login", response_model=SignInResponse)
 def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
-    row = consume_otp_and_get_user(payload.email, payload.otp)
+    with connect() as conn:
+        row = consume_otp_and_get_user(conn, payload.email, payload.otp)
     if row is None:
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
@@ -96,9 +93,9 @@ def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
     return SignInResponse(jwt=token)
 
 
-@router.get("/myprofile", response_model=UserResponse)
-def get_myprofile(context: dict[str, Any] = Depends(get_current_user_context)) -> UserResponse:
-    return UserResponse(user=to_user_view(context))
+@router.get("/myprofile", response_model=ProfileView)
+def get_myprofile(context: dict[str, Any] = Depends(get_current_user_context)) -> ProfileView:
+    return to_profile_view(context)
 
 
 @router.patch("/myprofile", response_model=EmptyResponse)
@@ -108,44 +105,50 @@ def update_me(
     context: dict[str, Any] = Depends(get_current_user_context),
 ) -> EmptyResponse:
     current_user = context
-    updates: dict[str, object] = {}
-    if payload.full_name is not None:
-        updates["name"] = payload.full_name
+    updates: list[tuple[str, object]] = []
+    if payload.name is not None:
+        updates.append(("name", payload.name))
     if payload.contact_info is not None:
-        updates["contact_info"] = payload.contact_info
+        updates.append(("contact_info", payload.contact_info))
     if payload.is_active is not None:
-        updates["active"] = int(payload.is_active)
+        updates.append(("active", int(payload.is_active)))
 
     if not updates:
         return EmptyResponse()
 
-    set_clause = ", ".join(f"{field} = ?" for field in updates)
-    values = list(updates.values())
+    set_clause = ", ".join(f"{field} = ?" for field, _ in updates)
+    values = [value for _, value in updates]
     values.append(current_user["id"])
 
-    with storage_connect() as conn:
+    with connect() as conn:
         cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
-        if cur.rowcount == 0:
+        if cur.fetchone() is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
                                 detail="User not found")
     return EmptyResponse()
 
 
-@router.get("/profile/{user_id}", response_model=UserResponse)
-def get_profile(user_id: str, request: Request) -> UserResponse:
-    user = fetch_user_by_id(user_id)
-    if user is None:
+@router.get("/profile/{user_id}", response_model=ProfileView)
+def get_profile(user_id: str, request: Request) -> ProfileView:
+    with connect() as conn:
+        user = fetch_user_by_id(conn, user_id)
+    if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserResponse(user=to_user_view(user))
+    return to_profile_view(user)
 
 
-@router.get("/notifications", response_model=NotificationsResponse)
+@router.get("/notifications", response_model=list[NotificationView])
 def get_notifications(
     request: Request,
     status: Literal["attended", "not-attended", "all"] | None = None,
     n: int | None = None,
     context: dict[str, Any] = Depends(get_current_user_context),
-) -> NotificationsResponse:
+) -> list[NotificationView]:
+    if n is not None and n < 1:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST, detail="n must be positive"
+        )
+
     current_user = context
     ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
@@ -154,17 +157,10 @@ def get_notifications(
         met_filter = True
     elif status == "not-attended":
         met_filter = False
-    rows = list_pairings_for_user(current_user_id, met_filter)
-    if n is not None:
-        if n < 1:
-            raise HTTPException(
-                status_code=http_status.HTTP_400_BAD_REQUEST, detail="n must be positive"
-            )
-        rows = rows[:n]
+    with connect(readonly=True) as conn:
+        rows = list_pairings_for_user(conn, current_user_id, met_filter, n)
 
-    return NotificationsResponse(
-        notifications=[pairing_to_notification(row, current_user_id) for row in rows],
-    )
+    return [pairing_to_notification(row, current_user_id) for row in rows]
 
 
 @router.post("/confirm", response_model=EmptyResponse)
@@ -176,7 +172,8 @@ def confirm_notification(
     current_user = context
     ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
-    updated = mark_pairing_met(current_user_id, payload.notification_id)
+    with connect() as conn:
+        updated = mark_pairing_met(conn, payload.notification_id, current_user_id)
     if not updated:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found"
