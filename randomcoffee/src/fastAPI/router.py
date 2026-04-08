@@ -195,7 +195,7 @@ def confirm_notification(
     ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
     with connect() as conn:
-        updated = mark_pairing_met(conn, payload.notification_id, current_user_id)
+        updated = mark_pairing_met(conn, payload.notification_id)
     if not updated:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found"

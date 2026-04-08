@@ -120,8 +120,6 @@ def list_pairings_for_user(
                 p.id2,
                 p.created_at,
                 p.meeting_happened,
-                p.user1_confirmed,
-                p.user2_confirmed,
                 CASE WHEN p.id1 = ? THEN u2.email ELSE u1.email END AS partner_email,
                 CASE WHEN p.id1 = ? THEN u2.name ELSE u1.name END AS partner_name
         FROM pairings p
@@ -142,43 +140,17 @@ def list_pairings_for_user(
     return [dict(row) for row in rows]
 
 
-def mark_pairing_met(conn: sqlite3.Connection, pair_id: str, user_id: str) -> bool:
-    pair = conn.execute(
+def mark_pairing_met(conn: sqlite3.Connection, pair_id: str) -> bool:
+    c = conn.execute(
         """
-        SELECT id1, id2
-        FROM pairings
+        UPDATE pairings
+        SET meeting_happened = 1
         WHERE pair_id = ?
+        RETURNING 1
         """,
         (pair_id,),
-    ).fetchone()
-    if pair is None:
-        return False
-
-    if str(pair["id1"]) == user_id:
-        conn.execute(
-            """
-            UPDATE pairings
-            SET user1_confirmed = 1,
-                meeting_happened = 1
-            WHERE pair_id = ?
-            """,
-            (pair_id,),
-        )
-        return True
-
-    if str(pair["id2"]) == user_id:
-        conn.execute(
-            """
-            UPDATE pairings
-            SET user2_confirmed = 1,
-                meeting_happened = 1
-            WHERE pair_id = ?
-            """,
-            (pair_id,),
-        )
-        return True
-
-    return False
+    )
+    return c.rowcount > 0
 
 
 def create_pairing(conn: sqlite3.Connection, id1: str, id2: str) -> str:

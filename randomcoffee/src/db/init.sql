@@ -21,8 +21,6 @@ CREATE TABLE IF NOT EXISTS pairings ( -- this table stores one row per pair
     id2 TEXT REFERENCES users,
     created_at TEXT NOT NULL,
     meeting_happened INTEGER NOT NULL DEFAULT 0, -- bool
-    user1_confirmed INTEGER NOT NULL DEFAULT 0, -- bool
-    user2_confirmed INTEGER NOT NULL DEFAULT 0, -- bool
     CHECK (id1 != id2)
 );
 
