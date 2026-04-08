@@ -15,6 +15,7 @@ def create_app() -> FastAPI:
         app.state.login_start_attempts = {}
         with connect() as conn:
             initialize_if_not_exists(conn)
+            conn.commit()
         yield
 
     app = FastAPI(title="RandomCoffee API", lifespan=lifespan)

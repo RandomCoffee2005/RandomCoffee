@@ -24,7 +24,7 @@ def get_current_user_context(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
-    with connect() as conn:
+    with connect(readonly=True) as conn:
         user = fetch_user_by_id(conn, payload.user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")

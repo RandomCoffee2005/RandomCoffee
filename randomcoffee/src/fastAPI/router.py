@@ -77,6 +77,7 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
     email = payload.email.strip().lower()
     with connect() as conn:
         code, expires_at = issue_otp(conn, email)
+        conn.commit()
 
     subject = "Random Coffee OTP"
     body = (
@@ -92,6 +93,7 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
     if not sent:
         with connect() as conn:
             conn.execute("DELETE FROM otps WHERE email = ?", (email,))
+            conn.commit()
         raise HTTPException(
             status_code=http_status.HTTP_502_BAD_GATEWAY,
             detail="Failed to send OTP email",
@@ -104,6 +106,7 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
 def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
     with connect() as conn:
         row = consume_otp_and_get_user(conn, payload.email, payload.otp)
+        conn.commit()
     if row is None:
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
@@ -144,12 +147,13 @@ def update_me(
         if cur.fetchone() is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
                                 detail="User not found")
+        conn.commit()
     return EmptyResponse()
 
 
 @router.get("/profile/{user_id}", response_model=ProfileView)
 def get_profile(user_id: str, request: Request) -> ProfileView:
-    with connect() as conn:
+    with connect(readonly=True) as conn:
         user = fetch_user_by_id(conn, user_id)
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -193,6 +197,7 @@ def confirm_notification(
     current_user_id = str(current_user["id"])
     with connect() as conn:
         updated = mark_pairing_met(conn, payload.notification_id, current_user_id)
+        conn.commit()
     if not updated:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found"

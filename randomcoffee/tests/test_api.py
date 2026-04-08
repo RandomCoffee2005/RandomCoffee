@@ -35,7 +35,7 @@ def _auth_headers(token: str) -> dict[str, str]:
 
 def _latest_otp(email: str) -> str:
     normalized_email = email.strip().lower()
-    with connect() as conn:
+    with connect(readonly=True) as conn:
         row = conn.execute(
             """
             SELECT password
@@ -66,6 +66,7 @@ def test_sign_in_success(tmp_path: Path, mocker: MockerFixture):
     with TestClient(app) as client:
         with connect() as conn:
             create_user(conn, "user1@example.com", "User One")
+            conn.commit()
         start_response = client.post("/login_start", json={"email": "user1@example.com"})
         assert start_response.status_code == 200
         otp = _latest_otp("user1@example.com")
@@ -121,7 +122,7 @@ def test_email_input_is_case_insensitive_and_normalized(tmp_path: Path, mocker: 
         assert profile_response.status_code == 200
         assert profile_response.json()["name"] == "Abcdefghi"
 
-        with connect() as conn:
+        with connect(readonly=True) as conn:
             stored = conn.execute(
                 "SELECT email FROM users WHERE id = ?",
                 (profile_response.json()["id"],),
@@ -152,7 +153,7 @@ def test_email_input_trims_whitespace(tmp_path: Path, mocker: MockerFixture):
 
         profile_response = client.get("/myprofile", headers=_auth_headers(token))
         assert profile_response.status_code == 200
-        with connect() as conn:
+        with connect(readonly=True) as conn:
             stored = conn.execute(
                 "SELECT email FROM users WHERE id = ?",
                 (profile_response.json()["id"],),
@@ -168,6 +169,7 @@ def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
     with TestClient(app) as client:
         with connect() as conn:
             create_user(conn, "user2@example.com", "User Two")
+            conn.commit()
         token = _sign_in(client, "user2@example.com")
 
         update_response = client.patch(
@@ -212,13 +214,14 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
             create_user(conn, "alice@example.com", "Alice")
             create_user(conn, "bob@example.com", "Bob")
             create_user(conn, "charlie@example.com", "Charlie")
+            conn.commit()
 
         admin_token = _sign_in(client, "admin@example.com")
         alice_token = _sign_in(client, "alice@example.com")
         bob_token = _sign_in(client, "bob@example.com")
 
         # /admin/pairing schedules background matching; tests add a pairing directly.
-        with connect() as conn:
+        with connect(readonly=True) as conn:
             alice_id = str(
                 conn.execute(
                     "SELECT id FROM users WHERE email = ?", ("alice@example.com",)
@@ -231,6 +234,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
             )
         with connect() as conn:
             create_pairing(conn, alice_id, bob_id)
+            conn.commit()
 
         all_notifications = client.get("/notifications", headers=_auth_headers(alice_token))
         assert all_notifications.status_code == 200
@@ -286,6 +290,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
                 ).fetchone()["id"]
             )
             create_pairing(conn, charlie_id, bob_id)
+            conn.commit()
 
         bob_latest = client.get(
             "/notifications", headers=_auth_headers(bob_token), params={"n": 1}
@@ -329,6 +334,7 @@ def test_admin_trigger_forbidden_for_non_admin(tmp_path: Path, mocker: MockerFix
     with TestClient(app) as client:
         with connect() as conn:
             create_user(conn, "user3@example.com", "User Three")
+            conn.commit()
         token = _sign_in(client, "user3@example.com")
         response = client.post("/admin/pairing", headers=_auth_headers(token))
         assert response.status_code == 403
@@ -342,6 +348,7 @@ def test_admin_trigger_allows_case_insensitive_admin_email(tmp_path: Path, mocke
     with TestClient(app) as client:
         with connect() as conn:
             create_user(conn, "ADMIN@EXAMPLE.COM", "Admin Upper")
+            conn.commit()
 
         token = _sign_in(client, "ADMIN@EXAMPLE.COM")
         response = client.post("/admin/pairing", headers=_auth_headers(token))
@@ -371,6 +378,7 @@ def test_login_with_invalid_otp_returns_401(tmp_path: Path, mocker: MockerFixtur
     with TestClient(app) as client:
         with connect() as conn:
             create_user(conn, "user4@example.com", "User Four")
+            conn.commit()
 
         _ = client.post("/login_start", json={"email": "user4@example.com"})
         response = client.post(
@@ -400,6 +408,7 @@ def test_get_profile_hides_inactive_and_missing(tmp_path: Path, mocker: MockerFi
             active_id = create_user(conn, "active@example.com", "Active")
             inactive_id = create_user(conn, "inactive@example.com", "Inactive")
             conn.execute("UPDATE users SET active = 0 WHERE id = ?", (inactive_id,))
+            conn.commit()
 
         active_response = client.get(f"/profile/{active_id}")
         assert active_response.status_code == 200
@@ -425,6 +434,7 @@ def test_notifications_n_validation_and_confirm_forbidden_pair(
             bob_id = create_user(conn, "bob2@example.com", "Bob Two")
             create_user(conn, "charlie2@example.com", "Charlie Two")
             pair_id = create_pairing(conn, alice_id, bob_id)
+            conn.commit()
 
         charlie_token = _sign_in(client, "charlie2@example.com")
 
