@@ -145,7 +145,6 @@ def mark_pairing_met(conn: sqlite3.Connection, pair_id: str, user_id: str) -> bo
         UPDATE pairings
         SET meeting_happened = 1
         WHERE pair_id = ? AND (id1 = ? OR id2 = ?)
-        RETURNING 1
         """,
         (pair_id, user_id, user_id),
     )

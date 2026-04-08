@@ -246,6 +246,8 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         assert notification["met"] is False
         notification_id = notification["id"]
 
+        print(notification_id)
+
         confirm = client.post(
             "/confirm",
             headers=_auth_headers(alice_token),
