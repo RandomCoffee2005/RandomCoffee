@@ -120,14 +120,13 @@ def list_pairings_for_user(
                 p.id2,
                 p.created_at,
                 p.meeting_happened,
-                CASE WHEN p.id1 = ? THEN u2.email ELSE u1.email END AS partner_email,
                 CASE WHEN p.id1 = ? THEN u2.name ELSE u1.name END AS partner_name
         FROM pairings p
         JOIN users u1 ON u1.id = p.id1
         JOIN users u2 ON u2.id = p.id2
         WHERE p.id1 = ? OR p.id2 = ?
     """
-    params: list[object] = [user_id, user_id, user_id, user_id]
+    params: list[object] = [user_id, user_id, user_id]
     if met_filter is True:
         query += " AND meeting_happened = 1"
     elif met_filter is False:
@@ -140,15 +139,15 @@ def list_pairings_for_user(
     return [dict(row) for row in rows]
 
 
-def mark_pairing_met(conn: sqlite3.Connection, pair_id: str) -> bool:
+def mark_pairing_met(conn: sqlite3.Connection, pair_id: str, user_id: str) -> bool:
     c = conn.execute(
         """
         UPDATE pairings
         SET meeting_happened = 1
-        WHERE pair_id = ?
+        WHERE pair_id = ? AND (id1 = ? OR id2 = ?)
         RETURNING 1
         """,
-        (pair_id,),
+        (pair_id, user_id, user_id),
     )
     return c.rowcount > 0
 

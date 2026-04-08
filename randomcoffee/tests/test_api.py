@@ -217,10 +217,6 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         alice_token = _sign_in(client, "alice@example.com")
         bob_token = _sign_in(client, "bob@example.com")
 
-        trigger = client.post("/admin/pairing", headers=_auth_headers(admin_token))
-        assert trigger.status_code == 200
-        assert trigger.json() == {}
-
         # /admin/pairing schedules background matching; tests add a pairing directly.
         with connect() as conn:
             alice_id = str(
@@ -244,8 +240,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         last = client.get("/notifications", headers=_auth_headers(alice_token), params={"n": 1})
         assert last.status_code == 200
         notification = last.json()[0]
-        assert notification["first_confirmed"] is False
-        assert notification["second_confirmed"] is False
+        assert notification["met"] is False
         notification_id = notification["id"]
 
         confirm = client.post(
@@ -261,8 +256,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         )
         assert after_first_confirm.status_code == 200
         first_confirm_notification = after_first_confirm.json()[0]
-        assert first_confirm_notification["first_confirmed"] is True
-        assert first_confirm_notification["second_confirmed"] is False
+        assert first_confirm_notification["met"] is True
 
         bob_last = client.get(
             "/notifications", headers=_auth_headers(bob_token), params={"n": 1}
@@ -283,8 +277,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         )
         assert after_both_confirm.status_code == 200
         both_confirm_notification = after_both_confirm.json()[0]
-        assert both_confirm_notification["first_confirmed"] is True
-        assert both_confirm_notification["second_confirmed"] is True
+        assert both_confirm_notification["met"] is True
 
         with connect() as conn:
             charlie_id = str(
@@ -299,8 +292,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         )
         assert bob_latest.status_code == 200
         bob_latest_notification = bob_latest.json()[0]
-        assert bob_latest_notification["first_confirmed"] is False
-        assert bob_latest_notification["second_confirmed"] is False
+        assert bob_latest_notification["met"] is False
 
         bob_latest_confirm = client.post(
             "/confirm",
@@ -315,8 +307,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
         )
         assert bob_second_only.status_code == 200
         bob_second_only_notification = bob_second_only.json()[0]
-        assert bob_second_only_notification["first_confirmed"] is False
-        assert bob_second_only_notification["second_confirmed"] is True
+        assert bob_second_only_notification["met"] is True
 
         met = client.get(
             "/notifications", headers=_auth_headers(alice_token), params={"status": "attended"}

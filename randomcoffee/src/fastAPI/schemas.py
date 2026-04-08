@@ -44,11 +44,8 @@ class NotificationView(BaseModel):
     id: str
     user_id: str
     partner_user_id: str
-    partner_email: EmailStr
     partner_name: str
     met: bool
-    first_confirmed: bool
-    second_confirmed: bool
     week_key: str
     created_at: str
 

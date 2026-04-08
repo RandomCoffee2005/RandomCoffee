@@ -56,11 +56,8 @@ def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
         id=pair_id,
         user_id=current_user_id,
         partner_user_id=partner_user_id,
-        partner_email=row["partner_email"],
         partner_name=row["partner_name"],
         met=bool(row["meeting_happened"]),
-        first_confirmed=bool(row["user1_confirmed"]),
-        second_confirmed=bool(row["user2_confirmed"]),
         week_key=week_key,
         created_at=created_at,
     )
@@ -195,7 +192,7 @@ def confirm_notification(
     ensure_active_user(current_user)
     current_user_id = str(current_user["id"])
     with connect() as conn:
-        updated = mark_pairing_met(conn, payload.notification_id)
+        updated = mark_pairing_met(conn, payload.notification_id, current_user_id)
     if not updated:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND, detail="Notification not found"
