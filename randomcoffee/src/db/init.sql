@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS user_interests (
     interest_id INTEGER NOT NULL  -- to be defined in Python
 );
 
-CREATE TABLE IF NOT EXISTS pairings ( -- this table stores pairs in single 
-    pair_id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS pairings ( -- this table stores one row of pairings not doubled for both users
     id1 TEXT REFERENCES users,
     id2 TEXT REFERENCES users,
     created_at TEXT NOT NULL,
