@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 from typing import Any
 from typing import Literal
@@ -26,6 +27,7 @@ from db.sql import (
     list_pairings_for_user,
     mark_pairing_met,
 )
+from emailsender import send_email
 
 router = APIRouter()
 LOGIN_START_LIMIT = 5
@@ -75,9 +77,29 @@ def login_start(payload: LoginStartRequest, request: Request) -> LoginStartRespo
     valid_attempts.append(now)
     attempts_by_email[payload.email] = valid_attempts
 
+    email = payload.email.strip().lower()
     with connect() as conn:
-        code, expires_at = issue_otp(conn, payload.email)
-    # TODO: отправить OTP через email (payload.email, code, expires_at).
+        code, expires_at = issue_otp(conn, email)
+
+    subject = "Random Coffee OTP"
+    body = (
+        f"Your Random Coffee login code is {code}.\n"
+        f"It expires at {expires_at}.\n\n"
+        "If you did not request this code, you can ignore this email."
+    )
+    try:
+        sent = asyncio.run(send_email(email, subject, body))
+    except Exception:
+        sent = False
+
+    if not sent:
+        with connect() as conn:
+            conn.execute("DELETE FROM otps WHERE email = ?", (email,))
+        raise HTTPException(
+            status_code=http_status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send OTP email",
+        )
+
     return LoginStartResponse()
 
 

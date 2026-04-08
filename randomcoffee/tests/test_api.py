@@ -3,6 +3,7 @@ import sqlite3
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+import pytest
 
 from db.sql import connect, create_pairing
 from randomcoffee import create_app, create_user
@@ -18,6 +19,14 @@ class MockDBConfig:
 
     def is_admin(self, email: str) -> bool:
         return email.lower().strip() in self._admins
+
+
+@pytest.fixture(autouse=True)
+def mock_email_sender(mocker: MockerFixture):
+    async def fake_send_email(*args, **kwargs) -> bool:
+        return True
+
+    mocker.patch("fastAPI.router.send_email", fake_send_email)
 
 
 def _auth_headers(token: str) -> dict[str, str]:
