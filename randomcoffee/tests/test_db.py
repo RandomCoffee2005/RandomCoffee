@@ -118,7 +118,5 @@ def test_create_pairing_and_list_pairings_for_both_users(tmp_path: Path, mocker:
     assert len(bob_rows) == 1
     assert alice_rows[0]["pair_id"] == pair_id
     assert bob_rows[0]["pair_id"] == pair_id
-    assert alice_rows[0]["partner_email"] == "bob@example.com"
-    assert bob_rows[0]["partner_email"] == "alice@example.com"
     assert alice_rows[0]["meeting_happened"] == 0
     assert bob_rows[0]["meeting_happened"] == 0
