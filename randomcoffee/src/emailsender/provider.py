@@ -61,7 +61,8 @@ class EmailSender:
 
             return True
 
-        except Exception:
+        except Exception as ex:
+            print("ERROR:\tEmail Sender: ", ex)
             return False
 
 
