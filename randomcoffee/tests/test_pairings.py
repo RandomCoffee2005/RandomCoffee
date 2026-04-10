@@ -7,29 +7,6 @@ import pairalgo as algo
 dbpath = "/tmp/db.bin"
 
 
-def test_get_active_users(mocker: MockerFixture):
-    if os.path.exists(dbpath):
-        os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath)
-    db.initialize_if_not_exists()
-    assert os.path.exists(dbpath)
-
-    with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@tg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('5', 'test5@mail.ru', 'Anna', '@stg5', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('6', 'test6@mail.ru', 'Misha', '@stg6', '1')""")
-
-        conn.commit()
-
-    test_return = algo.get_active_users()
-    assert test_return == {'2', '3', '4', '6'}
-
-    os.remove(dbpath)
-
-
 def test_get_distributed_users(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
@@ -142,34 +119,6 @@ def test_have_they_met_before(mocker: MockerFixture):
     test_return_1 = algo.have_they_met_before('1', '2')
     test_return_2 = algo.have_they_met_before('3', '4')
     assert test_return_1 and not test_return_2
-
-    os.remove(dbpath)
-
-
-def test_make_pair(mocker: MockerFixture):
-    if os.path.exists(dbpath):
-        os.remove(dbpath)
-    _ = mocker.patch('envconfig.config.dbpath', dbpath)
-    db.initialize_if_not_exists()
-    assert os.path.exists(dbpath)
-
-    with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('5', 'test5@mail.ru', 'Anna', '@stg5', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('6', 'test6@mail.ru', 'Misha', '@stg6', '1')""")
-
-        conn.commit()
-
-    algo.make_pair('1', '6')
-    algo.make_pair('2', '3')
-
-    with db.connect(readonly=True) as conn:
-        cur = conn.execute("SELECT * FROM pairings")
-        assert len(cur.fetchall()) == 2
-        cur.close()
 
     os.remove(dbpath)
 

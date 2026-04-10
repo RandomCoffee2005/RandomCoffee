@@ -1,16 +1,8 @@
 import db
 from collections import defaultdict
 import random
-import uuid
 
-
-def get_active_users():
-    with db.connect(readonly=True) as conn:
-        cur = conn.execute("""SELECT id, active FROM users""")
-        users = cur.fetchall()
-        cur.close()
-
-        return set(user[0] for user in users if user[1] == 1)
+from db.sql import create_pairing, list_active_user_ids
 
 
 def get_distributed_users():
@@ -44,45 +36,17 @@ def get_user_interests(user_id: str):
 
 
 def get_undistributed_users_interests():
-    undistributed_users = get_active_users() - get_distributed_users()
+    active_user_ids = {}
+    with db.connect(readonly=True) as conn:
+        active_user_ids = set(list_active_user_ids(conn))
+
+    undistributed_users = active_user_ids - get_distributed_users()
     users_interests = dict()
 
     for user in undistributed_users:
         users_interests[user] = get_user_interests(user)
 
     return users_interests
-
-
-def make_pair(id1: str, id2: str):
-    # Check if user is pairing with themselves
-    assert id1 != id2
-
-    with db.connect() as conn:
-        # Check if users with id1 and id2 exist
-        cur = conn.execute(
-            """SELECT * FROM users WHERE id IN (?, ?)""",
-            (id1, id2)
-        )
-        assert len(cur.fetchall()) == 2
-        cur.close()
-
-        # Check if pair already exists
-        cur = conn.execute(
-            """SELECT 1 FROM pairings WHERE (id1 = ? AND id2 = ?) OR (id1 = ? AND id2 = ?)""",
-            (id1, id2, id2, id1)
-        )
-        assert cur.fetchone() is None
-        cur.close()
-
-        # Make a new pair
-        pair_id = uuid.uuid4().hex
-        conn.execute(
-            """INSERT INTO pairings VALUES (?, ?, ?, ?)""",
-            (pair_id, id1, id2, 0)
-        )
-        conn.commit()
-
-        return pair_id
 
 
 def have_they_met_before(id1: str, id2: str):
@@ -272,9 +236,10 @@ def distribute_users():
 
     all_pairs = interest_pairs + random_pairs
 
-    # for id1, id2 in all_pairs:
-    #     make_pair(id1, id2)
-    #     print(f"Created pair: {id1} - {id2}")
+    with db.connect(readonly=True) as conn:
+        for id1, id2 in all_pairs:
+            create_pairing(conn, id1, id2)
+            print(f"Created pair: {id1} - {id2}")
 
     print(f"Total pairs created: {len(all_pairs)}")
     print(f"Users without pair: {len(remaining) - len(random_pairs) * 2}")
