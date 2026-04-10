@@ -39,7 +39,7 @@ DEFAULT_AUTH = {
 
 DEFAULT_BACKEND = {
     "enabled": False,
-    "base_url": "http://127.0.0.1:8000",
+    "base_url": "http://backend:8080",
     "status": None,
 }
 

@@ -1,10 +1,16 @@
 services:
   backend:
+    hostname: backend
     build:
       context: ./randomcoffee
       dockerfile: ../docker/Backend
     volumes:
       - db-vol:/app/db/:rw
+    env_file: .env
+  frontend:
+    build:
+      context: ./randomcoffee
+      dockerfile: ../docker/Frontend
     ports:
       - 8080:8080
 
