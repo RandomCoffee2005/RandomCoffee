@@ -1,0 +1,21 @@
+name: Heavy PR checks
+
+on: [pull_request]
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./randomcoffee
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.14
+      - name: Install poetry
+        run: pip install poetry
+      - name: Install poetry project
+        run: poetry install
+      - name: Run unit tests
+        run: CI=yes poetry run pytest --cov=src --cov-fail-under=75
