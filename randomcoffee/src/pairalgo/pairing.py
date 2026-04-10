@@ -240,7 +240,7 @@ def distribute_users():
 
     all_pairs = interest_pairs + random_pairs
 
-    with db.connect(readonly=True) as conn:
+    with db.connect() as conn:
         for id1, id2 in all_pairs:
             create_pairing(conn, id1, id2)
             print(f"Created pair: {id1} - {id2}")
