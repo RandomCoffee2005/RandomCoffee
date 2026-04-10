@@ -1,4 +1,5 @@
 FROM python:3.14-alpine3.23
+RUN apk add --cache=no dumb-init
 RUN --mount=type=bind,source=backend/requirements.txt,target=/tmp/requirements.txt \
     pip install --break-system-packages --no-cache -r /tmp/requirements.txt
 RUN mkdir /app
@@ -14,4 +15,4 @@ RUN adduser -H -h /app -D -u 2000 randomcoffee randomcoffee
 
 EXPOSE 8080
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "--rewrite", "15:2", "--", "/docker-entrypoint.sh"]
