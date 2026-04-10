@@ -3,6 +3,48 @@ import streamlit as st
 from api import APIError, get_client
 from state import initialize_state, inject_global_styles, render_interest_chips, render_sidebar
 
+
+def render_meeting_confirmation():
+    if not st.session_state.match.get("meeting_confirmed"):
+        if st.button("Meeting took place", use_container_width=True):
+            if backend_enabled and st.session_state.match.get("notification_id"):
+                try:
+                    get_client().confirm_meeting(st.session_state.match["notification_id"])
+                    st.session_state.match["meeting_confirmed"] = True
+                    st.success("Meeting confirmation saved through backend.")
+                    st.rerun()
+                except APIError as exc:
+                    st.error(str(exc))
+            else:
+                st.session_state.match["meeting_confirmed"] = True
+                st.success("Meeting confirmation saved in UI state only.")
+                st.rerun()
+
+        with st.form("feedback_form"):
+            feedback = st.text_area(
+                "Optional feedback",
+                value=st.session_state.match.get("feedback_text", ""),
+                placeholder="How did the meeting go?",
+                height=120,
+            )
+            submit_feedback = st.form_submit_button("Submit feedback",
+                                                    use_container_width=True)
+
+        if submit_feedback:
+            st.session_state.match["feedback_text"] = feedback
+            st.session_state.match["feedback_submitted"] = True
+            if backend_enabled:
+                st.warning("Current backend does not provide a feedback endpoint yet. " +
+                           "Text is stored only in local UI state.")
+            else:
+                st.success("Feedback submitted successfully in mock UI state.")
+
+        if st.session_state.match.get("feedback_submitted"):
+            st.info(st.session_state.match.get("feedback_text") or "No text entered.")
+    else:
+        st.success("Meeting confirmed.")
+
+
 st.set_page_config(page_title="Dashboard • Random Coffee", page_icon="☕", layout="centered")
 
 initialize_state()
@@ -27,13 +69,15 @@ if not auth.get("authenticated"):
 
 if backend_enabled:
     st.markdown(
-        '<div class="backend-note"><b>Backend-connected dashboard.</b> This page reads <code>/notifications</code>, '
+        '<div class="backend-note"><b>Backend-connected dashboard.</b> ' +
+        'This page reads <code>/notifications</code>, ' +
         '<code>/profile/{user_id}</code>, and <code>/confirm</code>.</div>',
         unsafe_allow_html=True,
     )
 else:
     st.markdown(
-        '<div class="mock-note"><b>Mock dashboard.</b> Match generation, notifications, and persistence are demo-only in mock mode.</div>',
+        '<div class="mock-note"><b>Mock dashboard.</b> ' +
+        'Match generation, notifications, and persistence are demo-only in mock mode.</div>',
         unsafe_allow_html=True,
     )
 
@@ -64,7 +108,8 @@ if backend_enabled and auth.get("authenticated") and auth.get("jwt"):
         st.error(str(exc))
 
 if not profile.get("account_active", True):
-    st.error("Your account is currently disabled. Matching is unavailable while your profile is hidden.")
+    st.error("Your account is currently disabled. " +
+             "Matching is unavailable while your profile is hidden.")
 
 st.markdown("### Nearest meeting")
 
@@ -83,7 +128,8 @@ else:
             st.write("**Partner interests**")
             st.caption("Not available from current backend API.")
             st.write("**Common interests**")
-            st.caption("The PDF requires this, but the uploaded backend does not expose interests yet.")
+            st.caption("The PDF requires this, " +
+                       "but the uploaded backend does not expose interests yet.")
         else:
             common = set(st.session_state.match.get("common_interests", []))
             st.write("**Partner interests**")
@@ -94,51 +140,19 @@ else:
             st.write("**Common interests**")
             if common:
                 st.markdown(
-                    render_interest_chips(st.session_state.match.get("common_interests", []), common),
+                    render_interest_chips(
+                        st.session_state.match.get("common_interests", []),
+                        common
+                    ),
                     unsafe_allow_html=True,
                 )
             else:
                 st.caption("No common interests highlighted in this demo state.")
-
-        if not st.session_state.match.get("meeting_confirmed"):
-            if st.button("Meeting took place", use_container_width=True):
-                if backend_enabled and st.session_state.match.get("notification_id"):
-                    try:
-                        get_client().confirm_meeting(st.session_state.match["notification_id"])
-                        st.session_state.match["meeting_confirmed"] = True
-                        st.success("Meeting confirmation saved through backend.")
-                        st.rerun()
-                    except APIError as exc:
-                        st.error(str(exc))
-                else:
-                    st.session_state.match["meeting_confirmed"] = True
-                    st.success("Meeting confirmation saved in UI state only.")
-                    st.rerun()
-        else:
-            st.success("Meeting confirmed.")
-
-        if st.session_state.match.get("meeting_confirmed"):
-            with st.form("feedback_form"):
-                feedback = st.text_area(
-                    "Optional feedback",
-                    value=st.session_state.match.get("feedback_text", ""),
-                    placeholder="How did the meeting go?",
-                    height=120,
-                )
-                submit_feedback = st.form_submit_button("Submit feedback", use_container_width=True)
-
-            if submit_feedback:
-                st.session_state.match["feedback_text"] = feedback
-                st.session_state.match["feedback_submitted"] = True
-                if backend_enabled:
-                    st.warning("Current backend does not provide a feedback endpoint yet. Text is stored only in local UI state.")
-                else:
-                    st.success("Feedback submitted successfully in mock UI state.")
-
-            if st.session_state.match.get("feedback_submitted"):
-                st.info(st.session_state.match.get("feedback_text") or "No text entered.")
+        render_meeting_confirmation()
 
 st.markdown("### Matching note")
 st.caption(
-    "The PDF requires weekly automatic matching, one partner per week, and common-interest highlighting. The current frontend shows those states, but the uploaded backend only exposes notification retrieval and confirmation."
+    "The PDF requires weekly automatic matching, one partner per week, " +
+    "and common-interest highlighting. The current frontend shows those states, " +
+    "but the uploaded backend only exposes notification retrieval and confirmation."
 )

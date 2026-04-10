@@ -89,7 +89,8 @@ class APIClient:
             body["is_active"] = is_active
         self._request("PATCH", "/myprofile", body)
 
-    def get_notifications(self, status: str | None = None, n: int | None = None) -> list[dict[str, Any]]:
+    def get_notifications(self, status: str | None = None,
+                          n: int | None = None) -> list[dict[str, Any]]:
         params = []
         if status:
             params.append(f"status={status}")

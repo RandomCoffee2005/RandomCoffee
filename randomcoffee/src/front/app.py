@@ -11,19 +11,22 @@ render_sidebar()
 
 st.title("Random Coffee")
 st.write(
-    "Weekly random coffee chats for students and staff. This prototype is designed as a clean, "
-    "single-column UI with explicit separation between backend-backed features and demo-only states."
+    "Weekly random coffee chats for students and staff. This prototype is designed as a clean, " +
+    "single-column UI with explicit separation between " +
+    "backend-backed features and demo-only states."
 )
 
 if st.session_state.backend["enabled"]:
     ok, message = get_client().healthcheck_docs()
     if ok:
-        st.markdown(f'<div class="backend-note"><b>Backend mode.</b> {message}.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="backend-note"><b>Backend mode.</b> {message}.</div>',
+                    unsafe_allow_html=True)
     else:
         st.error(message)
 else:
     st.markdown(
-        '<div class="mock-note"><b>Mock mode.</b> No backend requests are sent. Use the sidebar to switch to backend mode.</div>',
+        '<div class="mock-note"><b>Mock mode.</b> No backend requests are sent. ' +
+        'Use the sidebar to switch to backend mode.</div>',
         unsafe_allow_html=True,
     )
 
@@ -46,6 +49,8 @@ st.write("- Developer-facing API docs access")
 
 st.markdown("### Current backend gap")
 st.info(
-    "The uploaded backend does not currently expose interests, about-me text, common-interest matching, or feedback persistence. "
-    "Those UI sections remain clearly marked as prototype-only until matching backend endpoints exist."
+    "The uploaded backend does not currently expose interests, about-me text, " +
+    "common-interest matching, or feedback persistence. " +
+    "Those UI sections remain clearly marked as prototype-only " +
+    "until matching backend endpoints exist."
 )

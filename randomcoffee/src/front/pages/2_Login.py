@@ -5,56 +5,58 @@ import streamlit as st
 from api import APIError, get_client
 from state import initialize_state, inject_global_styles, render_sidebar
 
-st.set_page_config(page_title="Register • Random Coffee", page_icon="📝", layout="centered")
+st.set_page_config(page_title="Login • Random Coffee", page_icon="🔐", layout="centered")
 
 initialize_state()
 inject_global_styles()
 render_sidebar()
 
-st.title("Register")
+st.title("Login")
 
 backend_enabled = st.session_state.backend["enabled"]
 if backend_enabled:
     st.markdown(
-        '<div class="backend-note"><b>Backend-connected flow.</b> The current backend has no separate registration endpoint. '
-        'Registration is effectively completed by requesting OTP and then signing in; a new user is auto-created on successful login.</div>',
+        '<div class="backend-note"><b>Backend-connected flow.</b> This page calls ' +
+        '<code>/login_start</code> and <code>/login</code>.</div>',
         unsafe_allow_html=True,
     )
 else:
     st.markdown(
-        '<div class="mock-note"><b>Mock flow.</b> OTP delivery and registration persistence are simulated only for the prototype.</div>',
+        '<div class="mock-note"><b>Mock flow.</b> OTP delivery and authentication ' +
+        'are simulated only for the prototype.</div>',
         unsafe_allow_html=True,
     )
 
 email_pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
-with st.form("register_request_form"):
+with st.form("login_request_form"):
     email = st.text_input("Email", placeholder="name@example.com")
     request_otp = st.form_submit_button("Request OTP", use_container_width=True)
 
 if request_otp:
     if not email or not re.match(email_pattern, email):
-        st.error("Please enter a valid email address.")
+        st.error("Invalid email. You are not logged in.")
     else:
         st.session_state.auth["current_email_input"] = email.strip()
         if backend_enabled:
             try:
                 get_client().login_start(email.strip())
                 st.session_state.auth["otp_sent"] = True
-                st.success("OTP requested successfully. Check the configured mailbox.")
+                st.success("OTP requested successfully.")
             except APIError as exc:
                 st.error(str(exc))
         else:
             st.session_state.auth["otp_sent"] = True
-            st.success("Mock OTP sent successfully. Use 123456 for the demo path.")
+            st.success("Mock OTP requested successfully. Delivery is simulated in this prototype.")
 
 if st.session_state.auth.get("otp_sent"):
-    with st.form("register_confirm_form"):
-        st.text_input("Email", value=st.session_state.auth.get("current_email_input", ""), disabled=True)
+    with st.form("login_confirm_form"):
+        st.text_input("Email", value=st.session_state.auth.get("current_email_input", ""),
+                      disabled=True)
         otp = st.text_input("OTP code", placeholder="123456", max_chars=6)
-        confirm = st.form_submit_button("Verify and continue", use_container_width=True)
+        login_submit = st.form_submit_button("Log in", use_container_width=True)
 
-    if confirm:
+    if login_submit:
         email_value = st.session_state.auth.get("current_email_input", "")
         if backend_enabled:
             try:
@@ -63,25 +65,23 @@ if st.session_state.auth.get("otp_sent"):
                 st.session_state.auth["otp_verified"] = True
                 st.session_state.auth["jwt"] = jwt
                 st.session_state.profile["email"] = email_value
-                st.success("Registration/login completed. Continue to Profile.")
-                st.page_link("pages/4_Profile.py", label="Open profile", icon="➡️")
+                st.success("Logged in successfully.")
+                st.page_link("pages/3_Dashboard.py", label="Open dashboard", icon="➡️")
             except APIError as exc:
                 st.error(str(exc))
         else:
             if otp != "123456":
-                st.error("Incorrect OTP. Registration failed in this mocked scenario.")
+                st.error("Incorrect OTP. Authentication failed in this mocked scenario.")
             else:
                 st.session_state.auth["authenticated"] = True
                 st.session_state.auth["otp_verified"] = True
                 st.session_state.auth["jwt"] = "mock-jwt"
                 st.session_state.profile["email"] = email_value
-                st.success("Registration confirmed in mock mode.")
-                st.page_link("pages/4_Profile.py", label="Open profile", icon="➡️")
+                st.success("Logged in successfully.")
+                st.page_link("pages/3_Dashboard.py", label="Open dashboard", icon="➡️")
 
 st.markdown("### Notes")
 if backend_enabled:
-    st.info(
-        "Backend behavior observed in the uploaded code: login_start issues OTP, and successful /login auto-creates a new user if the email does not already exist."
-    )
+    st.info("On backend errors, the exact API message is surfaced in the UI.")
 else:
-    st.info('Prototype demo OTP is hardcoded to "123456".')
+    st.info('For the mock success path, use OTP: "123456".')

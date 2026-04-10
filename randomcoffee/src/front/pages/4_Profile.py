@@ -17,13 +17,17 @@ profile = st.session_state.profile
 
 if backend_enabled:
     st.markdown(
-        '<div class="backend-note"><b>Partially backend-connected profile.</b> Name, Telegram/contact alias, and account visibility map to '
-        '<code>GET /myprofile</code> and <code>PATCH /myprofile</code>. Interests and About Me remain prototype-only fields because the backend does not expose them.</div>',
+        '<div class="backend-note"><b>Partially backend-connected profile.</b> ' +
+        'Name, Telegram/contact alias, and account visibility map to '
+        '<code>GET /myprofile</code> and <code>PATCH /myprofile</code>. ' +
+        'Interests and About Me remain prototype-only fields ' +
+        'because the backend does not expose them.</div>',
         unsafe_allow_html=True,
     )
 else:
     st.markdown(
-        '<div class="mock-note"><b>Mock profile editing.</b> Saving changes updates only Streamlit session state in mock mode.</div>',
+        '<div class="mock-note"><b>Mock profile editing.</b> ' +
+        'Saving changes updates only Streamlit session state in mock mode.</div>',
         unsafe_allow_html=True,
     )
 
@@ -48,11 +52,13 @@ with st.form("profile_form"):
         value=profile.get("about_me", ""),
         height=120,
     )
-    telegram = st.text_input("Telegram alias", value=profile.get("telegram", ""), placeholder="@username")
+    telegram = st.text_input("Telegram alias", value=profile.get("telegram", ""),
+                             placeholder="@username")
     save = st.form_submit_button("Save profile", use_container_width=True)
 
 if save:
-    st.session_state.profile["interests"] = [x.strip() for x in interests_raw.split(",") if x.strip()]
+    st.session_state.profile["interests"] = \
+        [x.strip() for x in interests_raw.split(",") if x.strip()]
     st.session_state.profile["about_me"] = about_me
     st.session_state.profile["profile_complete"] = all([name.strip(), telegram.strip()])
 

@@ -75,11 +75,13 @@ def reset_demo_state() -> None:
     st.session_state.auth = DEFAULT_AUTH.copy()
     st.session_state.ui_mode = "Normal"
 
+
 def logout() -> None:
     st.session_state.profile = DEFAULT_PROFILE.copy()
     st.session_state.match = DEFAULT_MATCH.copy()
     st.session_state.auth = DEFAULT_AUTH.copy()
     st.session_state.ui_mode = "Normal"
+
 
 def apply_mock_mode(mode: str) -> None:
     profile = DEFAULT_PROFILE.copy()
@@ -155,7 +157,8 @@ def render_sidebar() -> None:
         enabled = st.toggle(
             "Use backend API",
             value=st.session_state.backend["enabled"],
-            help="When enabled, supported pages call the FastAPI backend instead of demo-only mock state.",
+            help="When enabled, supported pages call the FastAPI backend instead of demo-only " +
+            "mock state.",
         )
         st.session_state.backend["enabled"] = enabled
         base_url = st.text_input(
@@ -186,7 +189,8 @@ def render_sidebar() -> None:
         #         st.rerun()
 
         if enabled:
-            st.info("Backend mode is active. Unsupported fields stay visibly marked as prototype-only.")
+            st.info("Backend mode is active. " +
+                    "Unsupported fields stay visibly marked as prototype-only.")
         else:
             st.warning("Mock mode is active. No backend requests are sent.")
 

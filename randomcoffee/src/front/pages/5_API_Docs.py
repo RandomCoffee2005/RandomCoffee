@@ -16,7 +16,9 @@ docs_url = f"{base_url}/docs"
 openapi_url = f"{base_url}/openapi.json"
 
 st.markdown(
-    '<div class="backend-note"><b>Developer page.</b> This page points to the backend Swagger and OpenAPI endpoints required by the project PDF.</div>',
+    '<div class="backend-note"><b>Developer page.</b> ' +
+    'This page points to the backend Swagger and ' +
+    'OpenAPI endpoints required by the project PDF.</div>',
     unsafe_allow_html=True,
 )
 
@@ -27,7 +29,8 @@ if st.session_state.backend["enabled"]:
     else:
         st.error(message)
 else:
-    st.warning("Backend mode is currently disabled. Links below are still generated from the configured base URL.")
+    st.warning("Backend mode is currently disabled. " +
+               "Links below are still generated from the configured base URL.")
 
 st.markdown("### Backend documentation endpoints")
 st.code(docs_url, language="text")
@@ -48,5 +51,7 @@ with st.container(border=True):
 
 st.markdown("### Gap versus project PDF")
 st.info(
-    "The PDF expects matching details with partner interests, common-interest highlighting, and optional feedback persistence. Those contracts are not present in the uploaded backend yet, so Swagger will not show them until backend endpoints are added."
+    "The PDF expects matching details with partner interests, common-interest highlighting, " +
+    "and optional feedback persistence. Those contracts are not present in the uploaded backend " +
+    "yet, so Swagger will not show them until backend endpoints are added."
 )
