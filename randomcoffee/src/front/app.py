@@ -1,7 +1,7 @@
 import streamlit as st
 
-from .api import get_client
-from .state import initialize_state, inject_global_styles, render_sidebar
+from api import get_client
+from state import initialize_state, inject_global_styles, render_sidebar
 
 st.set_page_config(page_title="Random Coffee", page_icon="☕", layout="centered")
 
