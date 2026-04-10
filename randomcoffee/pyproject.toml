@@ -23,7 +23,9 @@ dependencies = [
 packages = [
     {include = "randomcoffee", from = "src"}, 
     {include = "envconfig", from = "src"}, 
-    {include = "emailsender", from = "src"}
+    {include = "emailsender", from = "src"},
+    {include = "db", from = "src"},
+    {include = "fastAPI", from = "src"}
 ]
 
 [build-system]

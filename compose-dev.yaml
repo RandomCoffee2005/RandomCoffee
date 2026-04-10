@@ -1,0 +1,12 @@
+services:
+  backend:
+    build:
+      context: ./randomcoffee
+      dockerfile: ../docker/Backend
+    volumes:
+      - db-vol:/app/db/:rw
+    ports:
+      - 8080:8080
+
+volumes:
+  db-vol:
