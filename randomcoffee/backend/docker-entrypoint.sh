@@ -2,7 +2,7 @@
 
 if [ $(whoami) = root ]; then
     chown -R randomcoffee:randomcoffee /app
-    su -l randomcoffee /docker-entrypoint.sh "$@"
+    su randomcoffee /docker-entrypoint.sh "$@"
     exit $?
 fi
 

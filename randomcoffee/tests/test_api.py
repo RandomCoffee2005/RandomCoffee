@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 import pytest
 
-from db.sql import connect, create_pairing
-from randomcoffee import create_app, create_user
+from db.sql import connect, create_pairing, create_user
+from fastAPI.app import create_app
 
 
 class MockDBConfig:
