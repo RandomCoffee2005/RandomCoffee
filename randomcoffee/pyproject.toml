@@ -25,7 +25,8 @@ packages = [
     {include = "envconfig", from = "src"}, 
     {include = "emailsender", from = "src"},
     {include = "db", from = "src"},
-    {include = "fastAPI", from = "src"}
+    {include = "fastAPI", from = "src"},
+    {include = "front", from = "src"}
 ]
 
 [build-system]
