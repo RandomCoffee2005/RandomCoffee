@@ -118,6 +118,10 @@ def _find_greedy_matching(
 
     for user1 in users:
         if user1 not in matching:
+            # Skip users without any possible pairs
+            if user1 not in graph or not graph[user1]:
+                continue
+
             for user2 in graph[user1]:
                 if user2 not in matching:
                     matching[user1] = user2

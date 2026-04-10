@@ -14,11 +14,19 @@ from pairalgo.pairing import (
 dbpath = "/tmp/db.bin"
 
 
+class MockDBConfig:
+    dbpath: str
+
+    def __init__(self, dbpath: str):
+        self.dbpath = dbpath
+
+
 def test_get_distributed_users(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
@@ -27,8 +35,8 @@ def test_get_distributed_users(mocker: MockerFixture):
         conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
         conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
 
-        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', '1')""")
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', '0')""")
+        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')""")
+        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
 
         conn.commit()
 
@@ -41,8 +49,9 @@ def test_get_distributed_users(mocker: MockerFixture):
 def test_get_user_interests(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
@@ -67,8 +76,9 @@ def test_get_user_interests(mocker: MockerFixture):
 def test_get_undistributed_users_interests(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
@@ -77,7 +87,7 @@ def test_get_undistributed_users_interests(mocker: MockerFixture):
         conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
         conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
 
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', '0')""")
+        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
 
         conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
         conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
@@ -103,8 +113,9 @@ def test_get_undistributed_users_interests(mocker: MockerFixture):
 def test_have_they_met_before(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
@@ -113,13 +124,8 @@ def test_have_they_met_before(mocker: MockerFixture):
         conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
         conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
 
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
-
-        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', '1')""")
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', '0')""")
+        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')""")
+        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
 
         conn.commit()
 
@@ -133,13 +139,14 @@ def test_have_they_met_before(mocker: MockerFixture):
 def test_load_meetings_for_users(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
 
     with db.connect() as conn:
         conn.execute("INSERT INTO users VALUES ('1', 'a@a.ru', 'A', '@a', '1')")
         conn.execute("INSERT INTO users VALUES ('2', 'b@b.ru', 'B', '@b', '1')")
-        conn.execute("INSERT INTO pairings VALUES ('p1', '1', '2', '1')")
+        conn.execute("INSERT INTO pairings VALUES ('p1', '1', '2', 'sometime', '1')")
         conn.commit()
 
     meetings = _load_meetings_for_users(['1', '2'])
@@ -226,8 +233,9 @@ def test_distribute_remaining_randomly():
 def test_distribute_users(mocker: MockerFixture):
     if os.path.exists(dbpath):
         os.remove(dbpath)
-    _ = mocker.patch('envconfig.DBConfig.dbpath', dbpath)
-    db.initialize_if_not_exists()
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    with db.connect() as conn:
+        db.initialize_if_not_exists(conn)
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
