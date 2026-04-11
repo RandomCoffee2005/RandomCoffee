@@ -66,6 +66,29 @@ def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
     )
 
 
+def normalize_interests(interests: list[int] | None) -> list[int] | None:
+    if interests is None:
+        return None
+
+    for interest_id in interests:
+        if interest_id < 0 or interest_id >= len(interest_list):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"interest ID must be between 0 and {len(interest_list) - 1}",
+            )
+
+    return list(dict.fromkeys(interests))
+
+
+def replace_user_interests(conn: Any, user_id: str, interests: list[int]) -> None:
+    conn.execute("DELETE FROM user_interests WHERE id = ?", (user_id,))
+    if interests:
+        conn.executemany(
+            "INSERT INTO user_interests (id, interest_id) VALUES (?, ?)",
+            [(user_id, interest_id) for interest_id in interests],
+        )
+
+
 @router.post("/login_start", response_model=LoginStartResponse)
 def login_start(payload: LoginStartRequest, request: Request) -> LoginStartResponse:
     now = dt.datetime.now(dt.UTC)
@@ -129,7 +152,7 @@ def update_me(
     request: Request,
     context: dict[str, Any] = Depends(get_current_user_context),
 ) -> EmptyResponse:
-    current_user = context
+    user_id = str(context["id"])
     updates: list[tuple[str, object]] = []
     if payload.name is not None:
         updates.append(("name", payload.name))
@@ -138,18 +161,28 @@ def update_me(
     if payload.is_active is not None:
         updates.append(("active", int(payload.is_active)))
 
-    if not updates:
+    normalized_interests = normalize_interests(payload.interests)
+
+    if not updates and normalized_interests is None:
         return EmptyResponse()
 
-    set_clause = ", ".join(f"{field} = ?" for field, _ in updates)
-    values = [value for _, value in updates]
-    values.append(current_user["id"])
-
     with connect() as conn:
-        cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
-        if cur.fetchone() is None:
-            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
-                                detail="User not found")
+        if updates:
+            set_clause = ", ".join(f"{field} = ?" for field, _ in updates)
+            values = [value for _, value in updates]
+            values.append(user_id)
+            cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                    detail="User not found")
+        else:
+            cur = conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                    detail="User not found")
+
+        if normalized_interests is not None:
+            replace_user_interests(conn, user_id, normalized_interests)
         conn.commit()
     return EmptyResponse()
 

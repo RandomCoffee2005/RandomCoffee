@@ -96,6 +96,7 @@ def test_login_start_without_account(tmp_path: Path, mocker: MockerFixture):
         )
         assert profile_response.status_code == 200
         assert profile_response.json()["name"] == "New"
+        assert profile_response.json()["about_me"] == ""
         assert "email" not in profile_response.json()
 
 
@@ -415,6 +416,7 @@ def test_get_profile_hides_inactive_and_missing(tmp_path: Path, mocker: MockerFi
         active_response = client.get(f"/profile/{active_id}")
         assert active_response.status_code == 200
         assert active_response.json()["id"] == active_id
+        assert active_response.json()["about_me"] == ""
 
         inactive_response = client.get(f"/profile/{inactive_id}")
         assert inactive_response.status_code == 404
@@ -475,3 +477,80 @@ def test_interest_str(tmp_path: Path, mocker: MockerFixture):
             obj = response.json()
             assert isinstance(obj, str)
             assert obj == name
+
+
+def test_profile_interests_returns_sorted_and_hides_inactive(
+        tmp_path: Path, mocker: MockerFixture):
+    dbpath = str(tmp_path / "test_profile_interests_returns_sorted_and_hides_inactive.db")
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    app = create_app()
+    with TestClient(app) as client:
+        with connect() as conn:
+            active_id = create_user(conn, "active-interests@example.com", "Active Interests")
+            inactive_id = create_user(conn, "inactive-interests@example.com", "Inactive Interests")
+            conn.execute("UPDATE users SET active = 0 WHERE id = ?", (inactive_id,))
+            conn.executemany(
+                "INSERT INTO user_interests (id, interest_id) VALUES (?, ?)",
+                [
+                    (active_id, 4),
+                    (active_id, 1),
+                    (active_id, 3),
+                ],
+            )
+            conn.commit()
+
+        active_response = client.get(f"/profile_interests/{active_id}")
+        assert active_response.status_code == 200
+        assert active_response.json() == [1, 3, 4]
+
+        inactive_response = client.get(f"/profile_interests/{inactive_id}")
+        assert inactive_response.status_code == 404
+        assert inactive_response.json()["detail"] == "User not found"
+
+
+def test_update_myprofile_interests_persists_unique_values(tmp_path: Path, mocker: MockerFixture):
+    dbpath = str(tmp_path / "test_update_myprofile_interests_persists_unique_values.db")
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    app = create_app()
+    with TestClient(app) as client:
+        with connect() as conn:
+            create_user(conn, "interests@example.com", "Interests User")
+            conn.commit()
+
+        token = _sign_in(client, "interests@example.com")
+        response = client.patch(
+            "/myprofile",
+            headers=_auth_headers(token),
+            json={"interests": [3, 1, 3, 2]},
+        )
+        assert response.status_code == 200
+        assert response.json() == {}
+
+        profile = client.get("/myprofile", headers=_auth_headers(token))
+        assert profile.status_code == 200
+        user_id = profile.json()["id"]
+
+        interests_response = client.get(f"/profile_interests/{user_id}")
+        assert interests_response.status_code == 200
+        assert interests_response.json() == [1, 2, 3]
+
+
+def test_update_myprofile_interests_rejects_out_of_range_id(tmp_path: Path, mocker: MockerFixture):
+    dbpath = str(tmp_path / "test_update_myprofile_interests_rejects_out_of_range_id.db")
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    app = create_app()
+    with TestClient(app) as client:
+        with connect() as conn:
+            create_user(conn, "bad-interest@example.com", "Bad Interest")
+            conn.commit()
+
+        token = _sign_in(client, "bad-interest@example.com")
+        response = client.patch(
+            "/myprofile",
+            headers=_auth_headers(token),
+            json={"interests": [len(interest_list)]},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            f"interest ID must be between 0 and {len(interest_list) - 1}"
+        )
