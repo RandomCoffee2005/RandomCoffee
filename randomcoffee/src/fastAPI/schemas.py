@@ -39,6 +39,7 @@ class UserUpdateRequest(BaseModel):
     name: str | None = None
     contact_info: str | None = None
     is_active: bool | None = None
+    interests: list[int] | None = None
 
 
 class NotificationView(BaseModel):
