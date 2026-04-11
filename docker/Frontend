@@ -6,6 +6,9 @@ WORKDIR /app
 COPY src/front /app
 
 RUN adduser -H -h /app -D -u 2000 randomcoffee randomcoffee
+
+RUN chown -R randomcoffee:randomcoffee /app
+
 USER randomcoffee
 
 EXPOSE 8080
