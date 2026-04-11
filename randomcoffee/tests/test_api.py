@@ -457,12 +457,14 @@ def test_notifications_n_validation_and_confirm_forbidden_pair(
         assert foreign_confirm.json()["detail"] == "Notification not found"
 
 
-def test_interest_str():
+def test_interest_str(tmp_path: Path, mocker: MockerFixture):
+    dbpath = str(tmp_path / "test_interest_str.db")
+    _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
     app = create_app()
     ENDPOINT = "/interest_str/en"
     with TestClient(app) as client:
         no_id = client.get(ENDPOINT)
-        assert no_id.status_code == 400
+        assert no_id.status_code == 422
         for i in range(-1, -4, -1):
             assert client.get(ENDPOINT, params={"id": i}).status_code == 400
         for i in range(len(interest_list), len(interest_list) + 4):
