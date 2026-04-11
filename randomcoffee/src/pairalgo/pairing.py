@@ -1,8 +1,7 @@
 import db
+import db.sql
 from collections import defaultdict
 import random
-
-from db.sql import create_pairing, list_active_user_ids
 
 
 def get_distributed_users():
@@ -21,24 +20,13 @@ def get_distributed_users():
 
 def get_user_interests(user_id: str):
     with db.connect(readonly=True) as conn:
-        cur = conn.execute(
-            """SELECT interest_id FROM user_interests WHERE id = ?""",
-            (user_id,)
-        )
-        interests = cur.fetchall()
-        cur.close()
-
-    user_interests = set()
-    for item in interests:
-        user_interests.add(item[0])
-
-    return user_interests
+        return db.sql.get_user_interests(conn, user_id)
 
 
 def get_undistributed_users_interests():
     active_user_ids = {}
     with db.connect(readonly=True) as conn:
-        active_user_ids = set(list_active_user_ids(conn))
+        active_user_ids = set(db.sql.list_active_user_ids(conn))
 
     undistributed_users = active_user_ids - get_distributed_users()
     users_interests = dict()
@@ -242,7 +230,7 @@ def distribute_users():
 
     with db.connect() as conn:
         for id1, id2 in all_pairs:
-            create_pairing(conn, id1, id2)
+            db.sql.create_pairing(conn, id1, id2)
             print(f"Created pair: {id1} - {id2}")
 
     print(f"Total pairs created: {len(all_pairs)}")
