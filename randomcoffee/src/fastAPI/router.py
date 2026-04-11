@@ -159,10 +159,13 @@ def update_me(
 ) -> EmptyResponse:
     user_id = str(context["id"])
     updates: list[tuple[str, object]] = []
-    if payload.name is not None:
-        updates.append(("name", payload.name))
-    if payload.contact_info is not None:
-        updates.append(("contact_info", payload.contact_info))
+    for field, value in (
+        ("name", payload.name),
+        ("contact_info", payload.contact_info),
+        ("about_me", payload.about_me),
+    ):
+        if value is not None:
+            updates.append((field, value))
     if payload.is_active is not None:
         updates.append(("active", int(payload.is_active)))
 

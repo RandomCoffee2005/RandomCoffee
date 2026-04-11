@@ -177,7 +177,7 @@ def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
         update_response = client.patch(
             "/myprofile",
             headers=_auth_headers(token),
-            json={"name": "Updated User"},
+            json={"name": "Updated User", "about_me": "I like coffee chats"},
         )
         assert update_response.status_code == 200
         assert update_response.json() == {}
@@ -185,6 +185,7 @@ def test_user_edit_and_deactivate(tmp_path: Path, mocker: MockerFixture):
         profile_after_update = client.get("/myprofile", headers=_auth_headers(token))
         assert profile_after_update.status_code == 200
         assert profile_after_update.json()["name"] == "Updated User"
+        assert profile_after_update.json()["about_me"] == "I like coffee chats"
 
         deactivation_response = client.patch(
             "/myprofile",

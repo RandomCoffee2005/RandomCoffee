@@ -38,6 +38,7 @@ class EmptyResponse(BaseModel):
 class UserUpdateRequest(BaseModel):
     name: str | None = None
     contact_info: str | None = None
+    about_me: str | None = None
     is_active: bool | None = None
     interests: list[int] | None = None
 
