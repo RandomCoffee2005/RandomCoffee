@@ -38,8 +38,8 @@ DEFAULT_AUTH = {
 }
 
 DEFAULT_BACKEND = {
-    "enabled": False,
-    "base_url": "http://backend:8080",
+    "enabled": True,
+    "base_url": "http://127.0.0.1:8000",
     "status": None,
 }
 
@@ -136,6 +136,8 @@ def render_interest_chips(interests: list[str], highlight: set[str] | None = Non
 
 def render_sidebar() -> None:
     initialize_state()
+    st.session_state.backend["enabled"] = True
+
     with st.sidebar:
         st.title("☕ Random Coffee")
         st.caption("Single-column Streamlit prototype")
@@ -148,51 +150,19 @@ def render_sidebar() -> None:
         else:
             st.page_link("pages/1_Register.py", label="Register", icon="📝")
             st.page_link("pages/2_Login.py", label="Login", icon="🔐")
+
         if st.session_state.auth.get("authenticated"):
             if st.button("Log out", use_container_width=True):
                 logout()
                 st.switch_page("app.py")
 
         st.markdown("### Backend")
-        enabled = st.toggle(
-            "Use backend API",
-            value=st.session_state.backend["enabled"],
-            help="When enabled, supported pages call the FastAPI backend instead of demo-only " +
-            "mock state.",
-        )
-        st.session_state.backend["enabled"] = enabled
         base_url = st.text_input(
             "Backend base URL",
             value=st.session_state.backend["base_url"],
             placeholder="http://127.0.0.1:8000",
         )
         st.session_state.backend["base_url"] = base_url.strip()
-
-        # st.markdown("### Demo controls")
-        # selected_mode = st.selectbox(
-        #     "Mock state",
-        #     MOCK_MODES,
-        #     index=MOCK_MODES.index(
-        #         st.session_state.ui_mode if st.session_state.ui_mode in MOCK_MODES else "Normal"
-        #     ),
-        #     disabled=enabled,
-        # )
-
-        # col1, col2 = st.columns(2)
-        # with col1:
-        #     if st.button("Apply", use_container_width=True, disabled=enabled):
-        #         apply_mock_mode(selected_mode)
-        #         st.rerun()
-        # with col2:
-        #     if st.button("Reset", use_container_width=True):
-        #         reset_demo_state()
-        #         st.rerun()
-
-        if enabled:
-            st.info("Backend mode is active. " +
-                    "Unsupported fields stay visibly marked as prototype-only.")
-        else:
-            st.warning("Mock mode is active. No backend requests are sent.")
 
 
 def inject_global_styles() -> None:

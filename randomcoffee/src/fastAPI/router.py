@@ -46,14 +46,14 @@ def ensure_active_user(context: dict[str, Any]) -> None:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
-def to_profile_view(row: dict[str, Any]) -> ProfileView:
+def to_profile_view(row: dict[str, Any], interests: list[int] | None = None) -> ProfileView:
     return ProfileView(
         id=str(row["id"]),
         name=row["name"],
         contact_info=row["contact_info"],
         about_me=row["about_me"],
+        interests=sorted(interests or []),
     )
-
 
 def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
     pair_id = str(row["pair_id"])
@@ -148,7 +148,10 @@ def sign_in(payload: SignInRequest, request: Request) -> SignInResponse:
 
 @router.get("/myprofile", response_model=ProfileView)
 def get_myprofile(context: dict[str, Any] = Depends(get_current_user_context)) -> ProfileView:
-    return to_profile_view(context)
+    user_id = str(context["id"])
+    with connect(readonly=True) as conn:
+        interests = get_user_interests(conn, user_id)
+    return to_profile_view(context, interests)
 
 
 @router.patch("/myprofile", response_model=EmptyResponse)
@@ -199,9 +202,13 @@ def update_me(
 def get_profile(user_id: str, request: Request) -> ProfileView:
     with connect(readonly=True) as conn:
         user = fetch_user_by_id(conn, user_id)
-    if user is None or not bool(user["is_active"]):
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
-    return to_profile_view(user)
+        if user is None or not bool(user["is_active"]):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        interests = get_user_interests(conn, user_id)
+    return to_profile_view(user, interests)
 
 
 @router.get("/profile_interests/{user_id}", response_model=list[int])
