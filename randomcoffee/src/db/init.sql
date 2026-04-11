@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS user_interests (
     id TEXT REFERENCES users ON DELETE CASCADE,
-    interest_id INTEGER NOT NULL  -- to be defined in Python
+    interest_id INTEGER NOT NULL,  -- to be defined in Python
+    CHECK (interest_id BETWEEN 0 AND 129)
 );
 
 CREATE TABLE IF NOT EXISTS pairings ( -- this table stores one row per pair
