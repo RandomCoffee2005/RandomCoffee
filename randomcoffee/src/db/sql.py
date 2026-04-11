@@ -97,7 +97,7 @@ def consume_otp_and_get_user(
 def fetch_user_by_id(conn: sqlite3.Connection, user_id: str) -> dict[str, Any] | None:
     row = conn.execute(
         """
-        SELECT id, email, name, contact_info, active AS is_active
+        SELECT id, email, name, contact_info, about_me, active AS is_active
         FROM users
         WHERE id = ?
         """,
@@ -167,3 +167,13 @@ def create_pairing(conn: sqlite3.Connection, id1: str, id2: str) -> str:
 def list_active_user_ids(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute("SELECT id FROM users WHERE active = 1 ORDER BY id").fetchall()
     return [str(row["id"]) for row in rows]
+
+
+def get_user_interests(conn: sqlite3.Connection, user_id: str) -> set[int]:
+    cur = conn.execute(
+        """SELECT interest_id FROM user_interests WHERE id = ?""",
+        (user_id,)
+    )
+    res = {row[0] for row in cur.fetchall()}
+    cur.close()
+    return res

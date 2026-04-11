@@ -26,8 +26,10 @@ from db.sql import (
     issue_otp,
     list_pairings_for_user,
     mark_pairing_met,
+    get_user_interests
 )
 from emailsender import send_email
+from interest_names import interest_list
 
 router = APIRouter()
 LOGIN_START_LIMIT = 5
@@ -44,6 +46,7 @@ def to_profile_view(row: dict[str, Any]) -> ProfileView:
         id=str(row["id"]),
         name=row["name"],
         contact_info=row["contact_info"],
+        about_me=row["about_me"],
     )
 
 
@@ -61,6 +64,29 @@ def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
         week_key=week_key,
         created_at=created_at,
     )
+
+
+def normalize_interests(interests: list[int] | None) -> list[int] | None:
+    if interests is None:
+        return None
+
+    for interest_id in interests:
+        if interest_id < 0 or interest_id >= len(interest_list):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"interest ID must be between 0 and {len(interest_list) - 1}",
+            )
+
+    return list(dict.fromkeys(interests))
+
+
+def replace_user_interests(conn: Any, user_id: str, interests: list[int]) -> None:
+    conn.execute("DELETE FROM user_interests WHERE id = ?", (user_id,))
+    if interests:
+        conn.executemany(
+            "INSERT INTO user_interests (id, interest_id) VALUES (?, ?)",
+            [(user_id, interest_id) for interest_id in interests],
+        )
 
 
 @router.post("/login_start", response_model=LoginStartResponse)
@@ -126,7 +152,7 @@ def update_me(
     request: Request,
     context: dict[str, Any] = Depends(get_current_user_context),
 ) -> EmptyResponse:
-    current_user = context
+    user_id = str(context["id"])
     updates: list[tuple[str, object]] = []
     if payload.name is not None:
         updates.append(("name", payload.name))
@@ -135,18 +161,28 @@ def update_me(
     if payload.is_active is not None:
         updates.append(("active", int(payload.is_active)))
 
-    if not updates:
+    normalized_interests = normalize_interests(payload.interests)
+
+    if not updates and normalized_interests is None:
         return EmptyResponse()
 
-    set_clause = ", ".join(f"{field} = ?" for field, _ in updates)
-    values = [value for _, value in updates]
-    values.append(current_user["id"])
-
     with connect() as conn:
-        cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
-        if cur.fetchone() is None:
-            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
-                                detail="User not found")
+        if updates:
+            set_clause = ", ".join(f"{field} = ?" for field, _ in updates)
+            values = [value for _, value in updates]
+            values.append(user_id)
+            cur = conn.execute(f"UPDATE users SET {set_clause} WHERE id = ? RETURNING 1", values)
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                    detail="User not found")
+        else:
+            cur = conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                    detail="User not found")
+
+        if normalized_interests is not None:
+            replace_user_interests(conn, user_id, normalized_interests)
         conn.commit()
     return EmptyResponse()
 
@@ -158,6 +194,28 @@ def get_profile(user_id: str, request: Request) -> ProfileView:
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
     return to_profile_view(user)
+
+
+@router.get("/profile_interests/{user_id}", response_model=list[int])
+def get_profile_interests(user_id: str, request: Request) -> list[int]:
+    with connect(readonly=True) as conn:
+        user = fetch_user_by_id(conn, user_id)
+        if user is None or not bool(user["is_active"]):
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                detail="User not found")
+        interests = get_user_interests(conn, user_id)
+    return sorted(interests)
+
+
+# PLEASE do not use this in the frontend. Just import "interest_names"
+@router.get("/interest_str/en", response_model=str)
+def get_interest_str_en(request: Request, id: int) -> str:
+    if id < 0 or id >= len(interest_list):
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=f"interest ID must be between 0 and {len(interest_list) - 1}"
+        )
+    return interest_list[id]
 
 
 @router.get("/notifications", response_model=list[NotificationView])

@@ -30,13 +30,13 @@ def test_get_distributed_users(mocker: MockerFixture):
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '', '0')")
+        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '', '1')")
 
-        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')""")
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
+        conn.execute("INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')")
+        conn.execute("INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')")
 
         conn.commit()
 
@@ -55,13 +55,13 @@ def test_get_user_interests(mocker: MockerFixture):
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '0')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
+        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '', '0')")
+        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '', '1')")
 
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 3)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('2', 2)""")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 1)")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 2)")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 3)")
+        conn.execute("INSERT INTO user_interests VALUES ('2', 2)")
 
         conn.commit()
 
@@ -82,21 +82,21 @@ def test_get_undistributed_users_interests(mocker: MockerFixture):
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '', '1')")
 
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
+        conn.execute("INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')")
 
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 1)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 2)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('1', 3)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('2', 2)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('3', 3)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('3', 4)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('4', 1)""")
-        conn.execute("""INSERT INTO user_interests VALUES ('4', 2)""")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 1)")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 2)")
+        conn.execute("INSERT INTO user_interests VALUES ('1', 3)")
+        conn.execute("INSERT INTO user_interests VALUES ('2', 2)")
+        conn.execute("INSERT INTO user_interests VALUES ('3', 3)")
+        conn.execute("INSERT INTO user_interests VALUES ('3', 4)")
+        conn.execute("INSERT INTO user_interests VALUES ('4', 1)")
+        conn.execute("INSERT INTO user_interests VALUES ('4', 2)")
 
         conn.commit()
 
@@ -119,13 +119,13 @@ def test_have_they_met_before(mocker: MockerFixture):
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
-        conn.execute("""INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')""")
-        conn.execute("""INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')""")
+        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '', '1')")
 
-        conn.execute("""INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')""")
-        conn.execute("""INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')""")
+        conn.execute("INSERT INTO pairings VALUES ('1', '1', '2', 'sometime', '1')")
+        conn.execute("INSERT INTO pairings VALUES ('2', '3', '4', 'sometime', '0')")
 
         conn.commit()
 
@@ -144,8 +144,8 @@ def test_load_meetings_for_users(mocker: MockerFixture):
         db.initialize_if_not_exists(conn)
 
     with db.connect() as conn:
-        conn.execute("INSERT INTO users VALUES ('1', 'a@a.ru', 'A', '@a', '1')")
-        conn.execute("INSERT INTO users VALUES ('2', 'b@b.ru', 'B', '@b', '1')")
+        conn.execute("INSERT INTO users VALUES ('1', 'a@a.ru', 'A', '@a', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('2', 'b@b.ru', 'B', '@b', '', '1')")
         conn.execute("INSERT INTO pairings VALUES ('p1', '1', '2', 'sometime', '1')")
         conn.commit()
 
@@ -239,10 +239,10 @@ def test_distribute_users(mocker: MockerFixture):
     assert os.path.exists(dbpath)
 
     with db.connect() as conn:
-        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '1')")
-        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '1')")
-        conn.execute("INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '1')")
-        conn.execute("INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '1')")
+        conn.execute("INSERT INTO users VALUES ('1', 'test1@mail.ru', 'Alina', '@stg1', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('2', 'test2@mail.ru', 'Anton', '@stg2', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('3', 'test3@mail.ru', 'Andrew', '@stg3', '', '1')")
+        conn.execute("INSERT INTO users VALUES ('4', 'test4@mail.ru', 'Sofiya', '@stg4', '', '1')")
 
         conn.execute("INSERT INTO user_interests VALUES ('1', 1)")
         conn.execute("INSERT INTO user_interests VALUES ('1', 2)")

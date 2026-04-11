@@ -7,6 +7,7 @@ class ProfileView(BaseModel):
     id: str
     name: str
     contact_info: str
+    about_me: str
 
 
 class SignInRequest(BaseModel):
@@ -38,6 +39,7 @@ class UserUpdateRequest(BaseModel):
     name: str | None = None
     contact_info: str | None = None
     is_active: bool | None = None
+    interests: list[int] | None = None
 
 
 class NotificationView(BaseModel):

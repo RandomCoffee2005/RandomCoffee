@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     contact_info TEXT NOT NULL,
+    about_me TEXT NOT NULL DEFAULT '',
     active INTEGER NOT NULL DEFAULT 1, -- bool
     CHECK (length(email) BETWEEN 1 AND 256),
     CHECK (length(name) BETWEEN 1 AND 256)
@@ -12,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS user_interests (
     id TEXT REFERENCES users ON DELETE CASCADE,
-    interest_id INTEGER NOT NULL  -- to be defined in Python
+    interest_id INTEGER NOT NULL,  -- to be defined in Python
+    CHECK (interest_id BETWEEN 0 AND 129)
 );
 
 CREATE TABLE IF NOT EXISTS pairings ( -- this table stores one row per pair
