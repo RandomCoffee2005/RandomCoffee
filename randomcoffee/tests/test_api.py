@@ -7,6 +7,7 @@ import pytest
 
 from db.sql import connect, create_pairing, create_user
 from fastAPI.app import create_app
+from interest_names import interest_list
 
 
 class MockDBConfig:
@@ -454,3 +455,21 @@ def test_notifications_n_validation_and_confirm_forbidden_pair(
         )
         assert foreign_confirm.status_code == 404
         assert foreign_confirm.json()["detail"] == "Notification not found"
+
+
+def test_interest_str():
+    app = create_app()
+    ENDPOINT = "/interest_str/en"
+    with TestClient(app) as client:
+        no_id = client.get(ENDPOINT)
+        assert no_id.status_code == 400
+        for i in range(-1, -4, -1):
+            assert client.get(ENDPOINT, params={"id": i}).status_code == 400
+        for i in range(len(interest_list), len(interest_list) + 4):
+            assert client.get(ENDPOINT, params={"id": i}).status_code == 400
+        for i, name in enumerate(interest_list):
+            response = client.get(ENDPOINT, params={"id": i})
+            assert response.status_code == 200
+            obj = response.json()
+            assert isinstance(obj, str)
+            assert obj == name
