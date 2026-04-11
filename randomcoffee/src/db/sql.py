@@ -97,7 +97,7 @@ def consume_otp_and_get_user(
 def fetch_user_by_id(conn: sqlite3.Connection, user_id: str) -> dict[str, Any] | None:
     row = conn.execute(
         """
-        SELECT id, email, name, contact_info, active AS is_active
+        SELECT id, email, name, contact_info, about_me, active AS is_active
         FROM users
         WHERE id = ?
         """,

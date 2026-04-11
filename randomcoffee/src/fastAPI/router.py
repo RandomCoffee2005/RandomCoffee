@@ -44,6 +44,7 @@ def to_profile_view(row: dict[str, Any]) -> ProfileView:
         id=str(row["id"]),
         name=row["name"],
         contact_info=row["contact_info"],
+        about_me=row["about_me"],
     )
 
 

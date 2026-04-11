@@ -7,6 +7,7 @@ class ProfileView(BaseModel):
     id: str
     name: str
     contact_info: str
+    about_me: str
 
 
 class SignInRequest(BaseModel):
