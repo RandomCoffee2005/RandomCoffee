@@ -114,6 +114,12 @@ def _find_greedy_matching(
     """
     Find greedy matching for maximum pairs.
     """
+
+    def shuffled(lst: list[str]) -> list[str]:
+        res = lst[:]
+        random.shuffle(res)
+        return res
+
     matching = {}
 
     for user1 in users:
@@ -122,7 +128,7 @@ def _find_greedy_matching(
             if user1 not in graph or not graph[user1]:
                 continue
 
-            for user2 in graph[user1]:
+            for user2 in shuffled(graph[user1]):
                 if user2 not in matching:
                     matching[user1] = user2
                     matching[user2] = user1
