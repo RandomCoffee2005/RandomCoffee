@@ -1,5 +1,9 @@
 import asyncio
 import datetime as dt
+from pathlib import Path
+import os
+import subprocess
+import sys
 from typing import Any
 from typing import Literal
 
@@ -34,6 +38,7 @@ from interest_names import interest_list
 router = APIRouter()
 LOGIN_START_LIMIT = 5
 LOGIN_START_WINDOW = dt.timedelta(hours=1)
+SRC_ROOT = Path(__file__).resolve().parents[1]
 
 
 def ensure_active_user(context: dict[str, Any]) -> None:
@@ -266,6 +271,22 @@ def confirm_notification(
 @router.post("/admin/pairing", response_model=EmptyResponse)
 def trigger_pairings(context: dict[str, Any] = Depends(require_admin)) -> EmptyResponse:
     ensure_active_user(context)
-    # TODO: запускать генерацию пар в фоне
-    # TODO: после генерации отправлять уведомления пользователям
+    env = os.environ.copy()
+    python_path = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{SRC_ROOT}:{python_path}" if python_path else str(SRC_ROOT)
+
+    try:
+        subprocess.Popen(
+            [sys.executable, "-m", "pairalgo"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to start pairing process",
+        )
+
     return EmptyResponse()

@@ -333,6 +333,7 @@ def test_notifications_flow(tmp_path: Path, mocker: MockerFixture):
 def test_admin_trigger_forbidden_for_non_admin(tmp_path: Path, mocker: MockerFixture):
     dbpath = str(tmp_path / "test_admin_trigger_forbidden_for_non_admin.db")
     _ = mocker.patch('envconfig.DBConfig.instance', lambda: MockDBConfig(dbpath))
+    _ = mocker.patch("fastAPI.router.subprocess.Popen")
     app = create_app()
     with TestClient(app) as client:
         with connect() as conn:
@@ -347,6 +348,7 @@ def test_admin_trigger_allows_case_insensitive_admin_email(tmp_path: Path, mocke
     dbpath = str(tmp_path / "test_admin_trigger_allows_case_insensitive_admin_email.db")
     _ = mocker.patch('envconfig.DBConfig.instance',
                      lambda: MockDBConfig(dbpath, {"admin@example.com"}))
+    _ = mocker.patch("fastAPI.router.subprocess.Popen")
     app = create_app()
     with TestClient(app) as client:
         with connect() as conn:
