@@ -7,5 +7,6 @@
 - GET /profile/{user_id} -> 200 {...} / 404 {"detail":"User not found"}
 - GET /notifications(jwt:str, status?:"attended"|"not-attended"|"all", n?:int) -> 200 [{...},{...},...] / 401 / 403 / 400
 - GET /interest_str/en?id=<0-129> -> 200 "Interest name" / 400
+- GET /profile_interests/{user_id} -> 200 [1, 2, 4] / 404 {"detail": "User not found/inactive"}
 - POST /confirm(jwt:str, notification_id:str) -> 200 {} / 401 / 403 / 404
 - POST /admin/pairing(jwt:str, admin_required) -> 200 {} / 401 / 403

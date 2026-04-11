@@ -26,6 +26,7 @@ from db.sql import (
     issue_otp,
     list_pairings_for_user,
     mark_pairing_met,
+    get_user_interests
 )
 from emailsender import send_email
 from interest_names import interest_list
@@ -160,6 +161,17 @@ def get_profile(user_id: str, request: Request) -> ProfileView:
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
     return to_profile_view(user)
+
+
+@router.get("/profile_interests/{user_id}", response_model=list[int])
+def get_profile_interests(user_id: str, request: Request) -> list[int]:
+    with connect(readonly=True) as conn:
+        user = fetch_user_by_id(conn, user_id)
+        if user is None or not bool(user["is_active"]):
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND,
+                                detail="User not found")
+        interests = get_user_interests(conn, user_id)
+    return sorted(interests)
 
 
 # PLEASE do not use this in the frontend. Just import "interest_names"
