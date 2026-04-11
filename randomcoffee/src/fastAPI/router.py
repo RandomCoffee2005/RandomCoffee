@@ -28,6 +28,7 @@ from db.sql import (
     mark_pairing_met,
 )
 from emailsender import send_email
+from interest_names import interest_list
 
 router = APIRouter()
 LOGIN_START_LIMIT = 5
@@ -159,6 +160,17 @@ def get_profile(user_id: str, request: Request) -> ProfileView:
     if user is None or not bool(user["is_active"]):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found")
     return to_profile_view(user)
+
+
+# PLEASE do not use this in the frontend. Just import "interest_names"
+@router.get("/interest_str/en", response_model=str)
+def get_interest_str_en(request: Request, id: int) -> str:
+    if id < 0 or id >= len(interest_list):
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=f"interest ID must be between 0 and {len(interest_list) - 1}"
+        )
+    return interest_list[id]
 
 
 @router.get("/notifications", response_model=list[NotificationView])
