@@ -8,11 +8,19 @@ services:
       - db-vol:/app/db/:rw
     env_file: .env
   frontend:
+    hostname: frontend
     build:
       context: ./randomcoffee
       dockerfile: ../docker/Frontend
+  nginx:
+    image: nginx:1.29.8-alpine3.23
+    volumes:
+      - ${PWD}/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - 8080:8080
+      - 80:80
+    depends_on:
+      - backend
+      - frontend
 
 volumes:
   db-vol:
