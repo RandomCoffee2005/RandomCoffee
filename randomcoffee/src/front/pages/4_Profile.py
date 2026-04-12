@@ -16,7 +16,7 @@ if not auth.get("authenticated"):
     st.title("Profile")
     st.warning("Profile is available only after login.")
 
-    col1 = st.columns(1)
+    col2 = st.columns(1)
     with col2:
         st.page_link("pages/2_Login.py", label="Go to Login", icon="🔐")
 
@@ -138,4 +138,3 @@ if st.session_state.profile.get("account_active", True):
     st.success("Your profile is active and visible for weekly matching.")
 else:
     st.warning("Your profile is hidden from matching.")
-
