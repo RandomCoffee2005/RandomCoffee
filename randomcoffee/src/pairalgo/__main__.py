@@ -1,27 +1,12 @@
 import asyncio
-from .pairing import (
-    get_distributed_users,
-    get_user_interests,
-    get_undistributed_users_interests,
-    distribute_by_interests,
-    distribute_users,
-    have_they_met_before
+from pairing import (
+    distribute_users
 )
 from db.sql import connect, fetch_user_by_id
 from emailsender import send_email
 
 
 SUBJECT = "Random Coffee Meeting"
-
-
-__all__ = [
-    'get_distributed_users',
-    'get_user_interests',
-    'get_undistributed_users_interests',
-    'distribute_by_interests',
-    'distribute_users',
-    'have_they_met_before'
-]
 
 
 def _build_email_body(user: dict[str, str], partner: dict[str, str]) -> tuple[str, str]:
