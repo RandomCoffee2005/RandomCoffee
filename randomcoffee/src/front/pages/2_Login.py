@@ -14,18 +14,7 @@ render_sidebar()
 st.title("Login")
 
 backend_enabled = st.session_state.backend["enabled"]
-if backend_enabled:
-    st.markdown(
-        '<div class="backend-note"><b>Backend-connected flow.</b> This page calls ' +
-        '<code>/login_start</code> and <code>/login</code>.</div>',
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        '<div class="mock-note"><b>Mock flow.</b> OTP delivery and authentication ' +
-        'are simulated only for the prototype.</div>',
-        unsafe_allow_html=True,
-    )
+
 
 email_pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 

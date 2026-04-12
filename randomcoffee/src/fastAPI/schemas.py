@@ -8,6 +8,7 @@ class ProfileView(BaseModel):
     name: str
     contact_info: str
     about_me: str
+    interests: list[int]
 
 
 class SignInRequest(BaseModel):

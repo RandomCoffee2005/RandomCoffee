@@ -5,8 +5,32 @@ from typing import Any
 
 import requests
 import streamlit as st
+from interest_names import interest_list
 
 REQUEST_TIMEOUT_SECONDS = 8
+
+INTEREST_NAME_TO_ID = {name.lower(): idx for idx, name in enumerate(interest_list)}
+
+
+def interest_names_to_ids(names: list[str]) -> list[int]:
+    result: list[int] = []
+    for name in names:
+        key = name.strip().lower()
+        if key in INTEREST_NAME_TO_ID:
+            result.append(INTEREST_NAME_TO_ID[key])
+    return result
+
+
+def interest_ids_to_names(ids: list[Any]) -> list[str]:
+    result: list[str] = []
+    for raw in ids:
+        try:
+            idx = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= idx < len(interest_list):
+            result.append(interest_list[idx])
+    return result
 
 
 class APIError(Exception):
@@ -78,6 +102,8 @@ class APIClient:
         self,
         name: str | None = None,
         contact_info: str | None = None,
+        about_me: str | None = None,
+        interests: list[str] | None = None,
         is_active: bool | None = None,
     ) -> None:
         body: dict[str, Any] = {}
@@ -85,12 +111,19 @@ class APIClient:
             body["name"] = name
         if contact_info is not None:
             body["contact_info"] = contact_info
+        if about_me is not None:
+            body["about_me"] = about_me
+        if interests is not None:
+            body["interests"] = interest_names_to_ids(interests)
         if is_active is not None:
             body["is_active"] = is_active
         self._request("PATCH", "/myprofile", body)
 
-    def get_notifications(self, status: str | None = None,
-                          n: int | None = None) -> list[dict[str, Any]]:
+    def get_notifications(
+        self,
+        status: str | None = None,
+        n: int | None = None,
+    ) -> list[dict[str, Any]]:
         params = []
         if status:
             params.append(f"status={status}")

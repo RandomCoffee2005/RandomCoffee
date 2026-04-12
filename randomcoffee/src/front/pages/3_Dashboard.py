@@ -51,6 +51,7 @@ initialize_state()
 inject_global_styles()
 render_sidebar()
 
+
 st.title("Dashboard")
 
 backend_enabled = st.session_state.backend["enabled"]
@@ -59,32 +60,18 @@ profile = st.session_state.profile
 match = st.session_state.match
 
 if not auth.get("authenticated"):
-    st.warning("Dashboard is available only after registration or login.")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.page_link("pages/1_Register.py", label="Go to Register", icon="📝")
+    st.warning("Dashboard is available only after login.")
+    col2 = st.columns(1)
     with col2:
         st.page_link("pages/2_Login.py", label="Go to Login", icon="🔐")
     st.stop()
 
-if backend_enabled:
-    st.markdown(
-        '<div class="backend-note"><b>Backend-connected dashboard.</b> ' +
-        'This page reads <code>/notifications</code>, ' +
-        '<code>/profile/{user_id}</code>, and <code>/confirm</code>.</div>',
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        '<div class="mock-note"><b>Mock dashboard.</b> ' +
-        'Match generation, notifications, and persistence are demo-only in mock mode.</div>',
-        unsafe_allow_html=True,
-    )
 
 if backend_enabled and auth.get("authenticated") and auth.get("jwt"):
     try:
         client = get_client()
         notifications = client.get_notifications(n=1)
+
         if notifications:
             latest = notifications[0]
             partner_profile = client.get_profile(latest["partner_user_id"])
@@ -103,9 +90,42 @@ if backend_enabled and auth.get("authenticated") and auth.get("jwt"):
                 }
             )
         else:
-            st.session_state.match.update({"has_match": False, "notification_id": None})
+            st.session_state.match.update(
+                {
+                    "has_match": False,
+                    "notification_id": None,
+                    "partner_user_id": None,
+                    "name": "",
+                    "telegram": "",
+                    "meeting_confirmed": False,
+                    "created_at": None,
+                    "week_key": None,
+                    "interests": [],
+                    "common_interests": [],
+                }
+            )
+
     except APIError as exc:
-        st.error(str(exc))
+        error_text = str(exc).strip()
+
+        if "403" in error_text or "Forbidden" in error_text:
+            st.session_state.match.update(
+                {
+                    "has_match": False,
+                    "notification_id": None,
+                    "partner_user_id": None,
+                    "name": "",
+                    "telegram": "",
+                    "meeting_confirmed": False,
+                    "created_at": None,
+                    "week_key": None,
+                    "interests": [],
+                    "common_interests": [],
+                }
+            )
+            st.info("No match is available yet for this account.")
+        else:
+            st.error(error_text)
 
 if not profile.get("account_active", True):
     st.error("Your account is currently disabled. " +
@@ -150,9 +170,36 @@ else:
                 st.caption("No common interests highlighted in this demo state.")
         render_meeting_confirmation()
 
-st.markdown("### Matching note")
-st.caption(
-    "The PDF requires weekly automatic matching, one partner per week, " +
-    "and common-interest highlighting. The current frontend shows those states, " +
-    "but the uploaded backend only exposes notification retrieval and confirmation."
-)
+if not st.session_state.match.get("has_match", False):
+    st.markdown("### People you may meet later")
+    st.caption("Prototype-only preview. These cards are demo content, not live backend data.")
+
+    people_preview = [
+        {
+            "name": "Maya Chen",
+            "telegram": "@maya_chen",
+            "about_me": "Product designer who loves books, photography, and AI tools.",
+            "interests": ["Design", "Books", "Photography", "Technology"],
+        },
+        {
+            "name": "Daniel Kim",
+            "telegram": "@danielkim",
+            "about_me": "Backend developer interested in startups, robotics, and coffee chats.",
+            "interests": ["Programming", "Robotics", "Startups", "Business"],
+        },
+        {
+            "name": "Sofia Martinez",
+            "telegram": "@sofia_m",
+            "about_me": "Curious about art, travel, and meeting people outside her usual circle.",
+            "interests": ["Art", "Travel", "Culture", "Writing"],
+        },
+    ]
+
+    for person in people_preview:
+        with st.container(border=True):
+            st.write(f"**{person['name']}**")
+            st.write(f"**Telegram:** {person['telegram']}")
+            st.write("**About me:**")
+            st.write(person["about_me"])
+            st.write("**Interests:**")
+            st.markdown(render_interest_chips(person["interests"]), unsafe_allow_html=True)
