@@ -20,7 +20,7 @@ if [ $# != 0 ]; then
     exec "$@"
 fi
 
-trap 'kill "$backend_proc" "$cron_proc" 2>/dev/null; wait "$backend_proc" "$cron_proc" 2>/dev/null' INT TERM
+trap 'wait "$backend_proc" "$cron_proc" 2>/dev/null' INT TERM
 
 crond -f -l 8 & cron_proc=$!
 
