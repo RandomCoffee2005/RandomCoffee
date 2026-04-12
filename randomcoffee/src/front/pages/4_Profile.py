@@ -14,11 +14,9 @@ auth = st.session_state.auth
 
 if not auth.get("authenticated"):
     st.title("Profile")
-    st.warning("Profile is available only after registration or login.")
+    st.warning("Profile is available only after login.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.page_link("pages/1_Register.py", label="Go to Register", icon="📝")
+    col1 = st.columns(1)
     with col2:
         st.page_link("pages/2_Login.py", label="Go to Login", icon="🔐")
 
@@ -141,17 +139,3 @@ if st.session_state.profile.get("account_active", True):
 else:
     st.warning("Your profile is hidden from matching.")
 
-st.markdown("### Disable account")
-if st.button("Disable account", use_container_width=True, type="secondary"):
-    if backend_enabled and auth.get("jwt"):
-        try:
-            get_client().update_myprofile(is_active=False)
-            st.session_state.profile["account_active"] = False
-            st.warning("Account disabled through backend.")
-            st.rerun()
-        except APIError as exc:
-            st.error(str(exc))
-    else:
-        st.session_state.profile["account_active"] = False
-        st.warning("Account disabled in UI state only.")
-        st.rerun()

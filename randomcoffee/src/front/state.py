@@ -148,7 +148,6 @@ def render_sidebar() -> None:
             st.page_link("pages/3_Dashboard.py", label="Dashboard", icon="☕")
             st.page_link("pages/4_Profile.py", label="Profile", icon="👤")
         else:
-            st.page_link("pages/1_Register.py", label="Register", icon="📝")
             st.page_link("pages/2_Login.py", label="Login", icon="🔐")
 
         if st.session_state.auth.get("authenticated"):

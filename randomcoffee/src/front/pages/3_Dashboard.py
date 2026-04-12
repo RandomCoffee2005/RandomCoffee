@@ -60,10 +60,8 @@ profile = st.session_state.profile
 match = st.session_state.match
 
 if not auth.get("authenticated"):
-    st.warning("Dashboard is available only after registration or login.")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.page_link("pages/1_Register.py", label="Go to Register", icon="📝")
+    st.warning("Dashboard is available only after login.")
+    col2 = st.columns(1)
     with col2:
         st.page_link("pages/2_Login.py", label="Go to Login", icon="🔐")
     st.stop()
