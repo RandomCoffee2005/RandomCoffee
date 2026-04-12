@@ -7,6 +7,7 @@ from .pairing import (
     have_they_met_before
 )
 
+
 __all__ = [
     'get_distributed_users',
     'get_user_interests',
@@ -15,3 +16,6 @@ __all__ = [
     'distribute_users',
     'have_they_met_before'
 ]
+if __name__ == "__main__":
+    pairs: list[tuple[str, str]] = distribute_users()
+    # TODO send emails!

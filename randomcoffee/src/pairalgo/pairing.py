@@ -4,7 +4,7 @@ from collections import defaultdict
 import random
 
 
-def get_distributed_users():
+def get_distributed_users() -> set[str]:
     with db.connect(readonly=True) as conn:
         cur = conn.execute("""SELECT id1, id2 FROM pairings WHERE meeting_happened = 0""")
         pairs = cur.fetchall()
@@ -18,18 +18,18 @@ def get_distributed_users():
         return distributed_users
 
 
-def get_user_interests(user_id: str):
+def get_user_interests(user_id: str) -> set[int]:
     with db.connect(readonly=True) as conn:
         return db.sql.get_user_interests(conn, user_id)
 
 
-def get_undistributed_users_interests():
+def get_undistributed_users_interests() -> dict[str, set[int]]:
     active_user_ids = {}
     with db.connect(readonly=True) as conn:
         active_user_ids = set(db.sql.list_active_user_ids(conn))
 
     undistributed_users = active_user_ids - get_distributed_users()
-    users_interests = dict()
+    users_interests: dict[str, set[int]] = dict()
 
     for user in undistributed_users:
         users_interests[user] = get_user_interests(user)
@@ -37,7 +37,7 @@ def get_undistributed_users_interests():
     return users_interests
 
 
-def have_they_met_before(id1: str, id2: str):
+def have_they_met_before(id1: str, id2: str) -> bool:
     """
     Check if users have met before.
     """
@@ -53,7 +53,7 @@ def have_they_met_before(id1: str, id2: str):
         return result
 
 
-def _load_meetings_for_users(users: list[str]):
+def _load_meetings_for_users(users: list[str]) -> set[tuple[str, str]]:
     """
     Load all meeting history for given users with one database query.
     """
@@ -80,7 +80,7 @@ def _build_interests_graph(
         users_interests: dict[str, set[int]],
         users: list[str],
         meetings: set[tuple[str, str]]
-):
+) -> dict[str, list[str]]:
     """
     Build possible distributions graph excluding users who have already met.
     """
@@ -98,7 +98,7 @@ def _build_interests_graph(
 def _find_greedy_matching(
         graph: dict[str, list[str]],
         users: list[str]
-):
+) -> dict[str, str]:
     """
     Find greedy matching for maximum pairs.
     """
@@ -128,7 +128,7 @@ def _find_greedy_matching(
 def _extract_pairs_from_matching(
         matching: dict[str, str],
         users: list[str]
-):
+) -> tuple[list[tuple[str, str]], set[str]]:
     """
     Extract unique pairs from matching dictionary.
     """
@@ -148,7 +148,7 @@ def _extract_pairs_from_matching(
 def distribute_by_interests(
         users_interests: dict[str, set[int]],
         meetings: set[tuple[str, str]]
-):
+) -> tuple[list[tuple[str, str]], set[str]]:
     """
     Distribute active users based on their interests.
     """
@@ -166,7 +166,7 @@ def distribute_by_interests(
 def _distribute_remaining_randomly(
         unmatched_users: set[str],
         meetings: set[tuple[str, str]]
-):
+) -> list[tuple[str, str]]:
     """
     Distribute remaining users randomly, avoiding previous meetings when possible.
     """
@@ -212,7 +212,7 @@ def _distribute_remaining_randomly(
     return pairs
 
 
-def distribute_users():
+def distribute_users() -> list[tuple[str, str]]:
     """
     Main function to distribute users for weekly meetings.
     """
