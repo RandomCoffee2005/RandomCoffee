@@ -28,7 +28,4 @@ uvicorn randomcoffee:app --host 0.0.0.0 --port 8080 & backend_proc=$!
 # more programs
 wait -n $backend_proc $cron_proc # more processes
 
-kill "$backend_proc" "$cron_proc" 2>/dev/null
-wait "$backend_proc" "$cron_proc" 2>/dev/null
-
 # trap

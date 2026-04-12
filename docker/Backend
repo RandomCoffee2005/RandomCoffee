@@ -17,4 +17,4 @@ RUN adduser -H -h /app -D -u 2000 randomcoffee randomcoffee
 
 EXPOSE 8080
 
-ENTRYPOINT ["dumb-init", "--rewrite", "15:2", "--", "/docker-entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "--", "/docker-entrypoint.sh"]
