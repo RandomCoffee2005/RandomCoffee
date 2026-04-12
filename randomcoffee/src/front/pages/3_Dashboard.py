@@ -1,7 +1,5 @@
 import streamlit as st
 
-from state import render_interest_chips
-
 from api import APIError, get_client
 from state import initialize_state, inject_global_styles, render_interest_chips, render_sidebar
 

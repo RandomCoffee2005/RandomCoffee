@@ -10,6 +10,7 @@ class ProfileView(BaseModel):
     about_me: str
     interests: list[int]
 
+
 class SignInRequest(BaseModel):
     email: EmailStr
     otp: str

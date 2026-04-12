@@ -55,6 +55,7 @@ def to_profile_view(row: dict[str, Any], interests: list[int] | None = None) -> 
         interests=sorted(interests or []),
     )
 
+
 def pairing_to_notification(row: Any, current_user_id: str) -> NotificationView:
     pair_id = str(row["pair_id"])
     created_at = str(row["created_at"])

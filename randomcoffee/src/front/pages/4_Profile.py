@@ -57,11 +57,11 @@ with st.form("profile_form"):
     name = st.text_input("Full name", value=profile.get("name", ""))
 
     interests_raw = st.multiselect(
-    "Interests",
-    options=interest_list,
-    default=[item for item in profile.get("interests", []) if item in interest_list],
-    help="Select one or more interests.",
-)
+        "Interests",
+        options=interest_list,
+        default=[item for item in profile.get("interests", []) if item in interest_list],
+        help="Select one or more interests.",
+    )
 
     about_me = st.text_area(
         "About me",
