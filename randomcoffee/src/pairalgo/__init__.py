@@ -11,7 +11,7 @@ from db.sql import connect, fetch_user_by_id
 from emailsender import send_email
 
 
-SUBJECT = f"Random Coffee Meeting"
+SUBJECT = "Random Coffee Meeting"
 
 
 __all__ = [
@@ -24,14 +24,13 @@ __all__ = [
 ]
 
 
-def _build_email_body(user: dict[str, str], 
-                         partner: dict[str, str]) -> tuple[str, str]:
+def _build_email_body(user: dict[str, str], partner: dict[str, str]) -> tuple[str, str]:
     contact_info = partner.get("contact_info", "").strip() or "Unknown"
     about_me = partner.get("about_me", "").strip() or "Unknown"
 
     body = (
         f"Hello {user['name']}!\n\n"
-        f"Your partner for the next Random Coffee meeting:\n"
+        "Your partner for the next Random Coffee meeting:\n"
         f"\tName: {partner['name']}\n"
         f"\tEmail: {partner['email']}\n"
         f"\tContact info: {contact_info}\n"
@@ -44,13 +43,12 @@ def _build_email_body(user: dict[str, str],
     return body
 
 
-async def _send_email(user: dict[str, str], 
-                              partner: dict[str, str]) -> bool:
+async def _send_email(user: dict[str, str], partner: dict[str, str]) -> bool:
     body = _build_email_body(user, partner)
-    
+
     if await send_email(user["email"], SUBJECT, body):
         return True
-    
+
     await asyncio.sleep(10)  # wait before retrying
     return await send_email(user["email"], SUBJECT, body)
 
@@ -64,11 +62,11 @@ if __name__ == "__main__":
             for id1, id2 in pairs:
                 user1 = fetch_user_by_id(conn, id1)
                 user2 = fetch_user_by_id(conn, id2)
-                
+
                 if user1 is None or user2 is None:
                     print(f"Skipping email for pair ({id1}, {id2}) because user data is missing")
                     continue
-                
+
                 try:
                     result1 = asyncio.run(_send_email(user1, user2))
                     result2 = asyncio.run(_send_email(user2, user1))
