@@ -1,0 +1,20 @@
+FROM python:3.14-alpine3.23
+RUN apk add --cache=no dumb-init
+RUN --mount=type=bind,source=backend/requirements.txt,target=/tmp/requirements.txt \
+    pip install --break-system-packages --no-cache -r /tmp/requirements.txt
+RUN mkdir /app
+WORKDIR /app
+COPY backend/docker-entrypoint.sh /
+COPY src/db /usr/local/lib/python3.14/site-packages/db
+COPY src/emailsender /usr/local/lib/python3.14/site-packages/emailsender
+COPY src/envconfig /usr/local/lib/python3.14/site-packages/envconfig
+COPY src/fastAPI /usr/local/lib/python3.14/site-packages/fastAPI
+COPY src/interest_names /usr/local/lib/python3.14/site-packages/interest_names
+COPY src/pairalgo /usr/local/lib/python3.14/site-packages/pairalgo
+COPY src/randomcoffee /usr/local/lib/python3.14/site-packages/randomcoffee
+
+RUN adduser -H -h /app -D -u 2000 randomcoffee randomcoffee
+
+EXPOSE 8080
+
+ENTRYPOINT ["dumb-init", "--", "/docker-entrypoint.sh"]

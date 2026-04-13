@@ -1,0 +1,17 @@
+FROM python:3.14-alpine3.23
+RUN --mount=type=bind,source=frontend/requirements.txt,target=/tmp/requirements.txt \
+    pip install --break-system-packages --no-cache -r /tmp/requirements.txt
+COPY src/interest_names /usr/local/lib/python3.14/site-packages/interest_names
+RUN mkdir /app
+WORKDIR /app
+COPY src/front /app
+
+RUN adduser -H -h /app -D -u 2000 randomcoffee randomcoffee
+
+RUN chown -R randomcoffee:randomcoffee /app
+
+USER randomcoffee
+
+EXPOSE 8080
+
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080"]
